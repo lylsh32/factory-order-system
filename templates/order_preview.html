@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单详情 - {{ order.order_no }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .preview-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .preview-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .order-no {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: 500;
+            margin-top: 15px;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-producing { background: #cff4fc; color: #0a6b7a; }
+        .status-completed { background: #d1e7dd; color: #0f5132; }
+        .status-cancelled { background: #f8d7da; color: #842029; }
+        .status-paused { background: #e2e3e5; color: #41464b; }
+        
+        .preview-body {
+            padding: 30px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #6c757d;
+            font-weight: 500;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        .product-spec {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .spec-item {
+            text-align: center;
+            padding: 10px;
+        }
+        .spec-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .spec-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .remark-box {
+            background: #fff3cd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .attachments-list {
+            margin-top: 20px;
+        }
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .footer-info {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="preview-card">
+                    <div class="preview-header">
+                        <div class="mb-2">
+                            <i class="bi bi-box-seam fs-1"></i>
+                        </div>
+                        <div class="order-no">{{ order.order_no }}</div>
+                        <div class="status-badge status-{{ order.status }}">
+                            {{ order.get_status_text() }}
+                        </div>
+                    </div>
+                    
+                    <div class="preview-body">
+                        <div class="info-row">
+                            <span class="info-label"><i class="bi bi-person me-2"></i>客户名称</span>
+                            <span class="info-value">{{ order.customer_name }}</span>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label"><i class="bi bi-box me-2"></i>产品名称</span>
+                            <span class="info-value">{{ order.product_name }}</span>
+                        </div>
+                        
+                        <div class="product-spec">
+                            <div class="row">
+                                <div class="col-4 spec-item">
+                                    <div class="spec-value">{{ order.length }}</div>
+                                    <div class="spec-label">长度(mm)</div>
+                                </div>
+                                <div class="col-4 spec-item">
+                                    <div class="spec-value">{{ order.width }}</div>
+                                    <div class="spec-label">宽度(mm)</div>
+                                </div>
+                                <div class="col-4 spec-item">
+                                    <div class="spec-value">{{ order.quantity }}</div>
+                                    <div class="spec-label">数量</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-row">
+                            <span class="info-label"><i class="bi bi-calendar me-2"></i>创建时间</span>
+                            <span class="info-value">{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </div>
+                        
+                        {% if order.assigned_to %}
+                        <div class="info-row">
+                            <span class="info-label"><i class="bi bi-person-check me-2"></i>负责人</span>
+                            <span class="info-value">{{ order.assignee.name }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if order.remark %}
+                        <div class="remark-box">
+                            <div class="fw-bold mb-2"><i class="bi bi-chat-left-text me-2"></i>备注</div>
+                            <div class="mb-0">{{ order.remark }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if order.attachments %}
+                        <div class="attachments-list">
+                            <div class="fw-bold mb-3"><i class="bi bi-paperclip me-2"></i>附件 ({{ order.attachments|length }})</div>
+                            {% for attachment in order.attachments %}
+                            <div class="attachment-item">
+                                <i class="bi bi-file-earmark me-2 text-primary"></i>
+                                <span>{{ attachment.filename }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="footer-info">
+                        <i class="bi bi-clock me-1"></i>
+                        更新时间：{{ order.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

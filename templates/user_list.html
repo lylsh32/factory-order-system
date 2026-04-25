@@ -1,0 +1,194 @@
+{% extends "dashboard.html" %}
+
+{% block title %}用户管理 - 工厂排单系统{% endblock %}
+
+{% block main_content %}
+<div class="content-wrapper" style="padding: 0;">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('order.dashboard') }}">控制台</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.index') }}">系统管理</a></li>
+            <li class="breadcrumb-item active">用户管理</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="page-title mb-0"><i class="bi bi-people me-2"></i>用户管理</h2>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="bi bi-person-plus me-2"></i>添加用户
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>用户名</th>
+                            <th>姓名</th>
+                            <th>角色</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th class="text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="user-avatar-sm me-2">{{ user.name[0] }}</div>
+                                    <span class="fw-500">{{ user.username }}</span>
+                                </div>
+                            </td>
+                            <td>{{ user.name }}</td>
+                            <td>
+                                <span class="role-badge role-{{ user.role }}">
+                                    {% if user.role == 'admin' %}管理员
+                                    {% elif user.role == 'sales' %}跟单员
+                                    {% else %}生产人员{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                <span class="badge bg-success">启用</span>
+                                {% else %}
+                                <span class="badge bg-secondary">禁用</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td class="text-center">
+                                {% if user.id != current_user.id %}
+                                <button class="btn btn-sm {{ 'btn-outline-warning' if user.is_active else 'btn-outline-success' }}" 
+                                        onclick="toggleStatus({{ user.id }})">
+                                    <i class="bi {{ 'bi-ban' if user.is_active else 'bi-check-circle' }}"></i>
+                                    {{ '禁用' if user.is_active else '启用' }}
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser({{ user.id }})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% else %}
+                                <span class="text-muted small">当前账号</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加用户模态框 -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>添加新用户</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.add_user') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">用户名 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="username" required 
+                               placeholder="登录使用的账号名">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">姓名 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="name" required 
+                               placeholder="用户真实姓名">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">初始密码 <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" name="password" required 
+                               placeholder="设置初始密码" minlength="6">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">角色 <span class="text-danger">*</span></label>
+                        <select class="form-select" name="role" required>
+                            <option value="">请选择角色</option>
+                            <option value="admin">管理员</option>
+                            <option value="sales">跟单员</option>
+                            <option value="worker">生产人员</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">创建用户</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.user-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function toggleStatus(userId) {
+    if (!confirm('确认更改用户状态？')) return;
+    
+    fetch(`/admin/user/${userId}/toggle_status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败，请重试');
+    });
+}
+
+function deleteUser(userId) {
+    if (!confirm('确认删除此用户？此操作不可恢复！')) return;
+    if (!confirm('再次确认：用户的所有数据将永久删除！')) return;
+    
+    fetch(`/admin/user/${userId}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败，请重试');
+    });
+}
+</script>
+{% endblock %}

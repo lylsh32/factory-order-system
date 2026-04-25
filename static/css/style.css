@@ -1,0 +1,256 @@
+/* 工厂排单系统 - 全局样式增强 */
+
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #0dcaf0;
+    --sidebar-bg: #1a1a2e;
+    --sidebar-hover: #16213e;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(20px); }
+}
+
+/* 通用样式 */
+.card {
+    border-radius: 15px;
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important;
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a71d6 0%, #6a42a0 100%);
+}
+
+.form-control, .form-select {
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    padding: 12px 16px;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-label {
+    font-weight: 500;
+    color: #1a1a2e;
+    margin-bottom: 8px;
+}
+
+/* 侧边栏增强 */
+.sidebar {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%) !important;
+}
+
+.sidebar-menu li a {
+    border-radius: 0;
+    margin: 2px 0;
+}
+
+.sidebar-menu li a:hover {
+    background: rgba(102, 126, 234, 0.2) !important;
+}
+
+.sidebar-menu li a.active {
+    background: linear-gradient(90deg, rgba(102, 126, 234, 0.3) 0%, transparent 100%) !important;
+}
+
+/* 表格增强 */
+.table {
+    font-size: 0.9rem;
+}
+
+.table tbody tr {
+    transition: background 0.2s;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05) !important;
+}
+
+/* 状态徽章 */
+.status-badge {
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 20px;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-producing {
+    background: #cff4fc;
+    color: #0a6b7a;
+}
+
+.status-completed {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.status-cancelled {
+    background: #f8d7da;
+    color: #842029;
+}
+
+.status-paused {
+    background: #e2e3e5;
+    color: #41464b;
+}
+
+/* 角色徽章 */
+.role-badge {
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 5px;
+}
+
+.role-admin {
+    background: #e7e1ff;
+    color: #5a3dbf;
+}
+
+.role-sales {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.role-worker {
+    background: #cfe2ff;
+    color: #0a4a8a;
+}
+
+/* 模态框增强 */
+.modal-content {
+    border-radius: 15px;
+    border: none;
+}
+
+.modal-header {
+    border-bottom: 1px solid #f1f1f1;
+    border-radius: 15px 15px 0 0;
+}
+
+.modal-footer {
+    border-top: 1px solid #f1f1f1;
+}
+
+/* Toast通知 */
+.toast-container {
+    z-index: 9999;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .stat-card {
+        padding: 20px;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .page-title {
+        font-size: 1.4rem;
+    }
+    
+    .content-wrapper {
+        padding: 15px;
+    }
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+}
+
+/* 面包屑导航 */
+.breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+}
+
+.breadcrumb-item a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: #6c757d;
+}
+
+/* 列表组增强 */
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #f1f1f1;
+    padding: 15px 20px;
+    transition: background 0.2s;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.list-group-item:hover {
+    background: #f8f9fa;
+}
+
+/* 拖拽区域 */
+.drop-zone-active {
+    background: rgba(102, 126, 234, 0.1) !important;
+    border-color: #667eea !important;
+}

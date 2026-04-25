@@ -1,0 +1,375 @@
+{% extends "dashboard.html" %}
+
+{% block title %}{{ order.order_no }} - 工厂排单系统{% endblock %}
+
+{% block main_content %}
+<div class="content-wrapper" style="padding: 0;">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('order.dashboard') }}">控制台</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('order.order_list') }}">订单列表</a></li>
+            <li class="breadcrumb-item active">{{ order.order_no }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- 订单信息 -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>订单信息</h5>
+                    <span class="status-badge status-{{ order.status }} fs-6">
+                        {{ order.get_status_text() }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small mb-1">订单号</label>
+                                <div class="fw-bold fs-5">{{ order.order_no }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small mb-1">客户名称</label>
+                                <div class="fw-bold fs-5">{{ order.customer_name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <hr class="my-2">
+                        </div>
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="text-muted small mb-1">产品名称</label>
+                                <div class="fw-bold">{{ order.product_name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="text-muted small mb-1">长度 (mm)</label>
+                                <div class="fw-500">{{ order.length }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="text-muted small mb-1">宽度 (mm)</label>
+                                <div class="fw-500">{{ order.width }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="text-muted small mb-1">数量</label>
+                                <div class="fw-500">{{ order.quantity }}</div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="text-muted small mb-1">备注</label>
+                                <div class="p-3 bg-light rounded">
+                                    {{ order.remark if order.remark else '无' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 附件列表 -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-paperclip me-2"></i>图纸附件</h5>
+                </div>
+                <div class="card-body">
+                    {% if order.attachments %}
+                    <div class="list-group">
+                        {% for attachment in order.attachments %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark fs-4 text-primary me-3"></i>
+                                <div>
+                                    <div class="fw-500">{{ attachment.filename }}</div>
+                                    <small class="text-muted">上传于 {{ attachment.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </div>
+                            <a href="{{ url_for('order.download_attachment', attachment_id=attachment.id) }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download me-1"></i>下载
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-file-earmark-x fs-1 d-block mb-2"></i>
+                        <p class="mb-0">暂无附件</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 侧边信息 -->
+        <div class="col-lg-4">
+            <!-- 状态操作 -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>操作</h5>
+                </div>
+                <div class="card-body">
+                    {% if current_user.role == 'worker' %}
+                        {% if order.assigned_to is none %}
+                        <!-- 未分配订单：显示认领按钮 -->
+                        <button class="btn btn-success w-100 mb-2" onclick="claimOrder()">
+                            <i class="bi bi-hand-index me-2"></i>认领此订单
+                        </button>
+                        {% elif order.assigned_to == current_user.id %}
+                            <!-- 已分配给自己的订单 -->
+                            {% if order.status == 'pending' %}
+                            <button class="btn btn-success w-100 mb-2" onclick="updateStatus('producing')">
+                                <i class="bi bi-play-circle me-2"></i>开始生产
+                            </button>
+                            {% elif order.status == 'producing' %}
+                            <button class="btn btn-primary w-100 mb-2" onclick="updateStatus('completed')">
+                                <i class="bi bi-check-circle me-2"></i>标记完成
+                            </button>
+                            {% elif order.status == 'paused' %}
+                            <button class="btn btn-warning w-100 mb-2" onclick="updateStatus('producing')">
+                                <i class="bi bi-play-circle me-2"></i>恢复生产
+                            </button>
+                            {% endif %}
+                            {% if order.status in ['producing', 'pending'] %}
+                            <button class="btn btn-outline-secondary w-100" onclick="updateStatus('paused')">
+                                <i class="bi bi-pause-circle me-2"></i>暂停生产
+                            </button>
+                            {% endif %}
+                        {% else %}
+                        <div class="text-center text-muted py-3">
+                            <i class="bi bi-lock fs-3 d-block mb-2"></i>
+                            此订单已分配给其他生产人员
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if current_user.role in ['admin', 'sales'] %}
+                        {% if order.created_by == current_user.id or current_user.role == 'admin' %}
+                            {% if order.status in ['pending', 'paused'] %}
+                            <button class="btn btn-danger w-100 mb-2" onclick="updateStatus('cancelled')">
+                                <i class="bi bi-x-circle me-2"></i>取消订单
+                            </button>
+                            {% endif %}
+                            {% if order.status == 'cancelled' and current_user.role == 'admin' %}
+                            <button class="btn btn-warning w-100 mb-2" onclick="updateStatus('pending')">
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>恢复订单
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if current_user.role == 'admin' %}
+                    <hr>
+                    <button class="btn btn-outline-danger w-100" onclick="deleteOrder()">
+                        <i class="bi bi-trash me-2"></i>删除订单
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 订单信息 -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>订单详情</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="text-muted small mb-1">创建人</label>
+                        <div class="fw-500">{{ order.creator.name if order.creator else '-' }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small mb-1">负责人</label>
+                        <div class="fw-500">
+                            {% if order.assignee %}
+                                {{ order.assignee.name }}
+                            {% else %}
+                                <span class="text-muted">未分配</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small mb-1">创建时间</label>
+                        <div class="fw-500">{{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="text-muted small mb-1">更新时间</label>
+                        <div class="fw-500">{{ order.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 状态流转 -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-arrow-right-circle me-2"></i>状态流转</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="status-badge status-pending">待生产</span>
+                        <i class="bi bi-arrow-right text-muted"></i>
+                        <span class="status-badge status-producing">进行中</span>
+                        <i class="bi bi-arrow-right text-muted"></i>
+                        <span class="status-badge status-completed">已完成</span>
+                    </div>
+                    <hr class="my-3">
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="status-badge status-pending">待生产</span>
+                        <i class="bi bi-arrow-right text-muted"></i>
+                        <span class="status-badge status-cancelled">已取消</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <span class="status-badge status-producing">进行中</span>
+                        <i class="bi bi-arrow-right text-muted"></i>
+                        <span class="status-badge status-paused">已暂停</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 订单二维码 -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-qr-code me-2"></i>订单二维码</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div id="qrcodeContainer" class="mb-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small mb-2">微信扫码预览订单详情</p>
+                    <button class="btn btn-outline-primary btn-sm" onclick="downloadQRCode()">
+                        <i class="bi bi-download me-1"></i>下载二维码
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function updateStatus(status) {
+    const statusText = {
+        'producing': '开始生产',
+        'completed': '完成',
+        'paused': '暂停',
+        'cancelled': '取消',
+        'pending': '恢复'
+    };
+    
+    if (!confirm(`确认将此订单标记为"${statusText[status]}"？`)) return;
+    
+    fetch(`/order/{{ order.id }}/update_status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `status=${status}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败，请重试');
+    });
+}
+
+function claimOrder() {
+    if (!confirm('确认认领此订单？认领后您将成为此订单的负责人。')) return;
+    
+    fetch(`/order/{{ order.id }}/claim`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('认领失败，请重试');
+    });
+}
+
+function deleteOrder() {
+    if (!confirm('确认删除此订单？此操作不可恢复！')) return;
+    if (!confirm('再次确认：删除后所有数据将永久丢失！')) return;
+    
+    fetch(`/order/{{ order.id }}/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '{{ url_for("order.order_list") }}';
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败，请重试');
+    });
+}
+
+// 加载二维码
+let qrcodeDataUrl = '';
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/order/{{ order.id }}/qrcode')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                qrcodeDataUrl = data.qrcode;
+                document.getElementById('qrcodeContainer').innerHTML = 
+                    `<img src="${data.qrcode}" alt="订单二维码" style="max-width: 200px;">`;
+            } else {
+                document.getElementById('qrcodeContainer').innerHTML = 
+                    '<p class="text-danger">二维码加载失败</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('qrcodeContainer').innerHTML = 
+                '<p class="text-danger">二维码加载失败</p>';
+        });
+});
+
+// 下载二维码
+function downloadQRCode() {
+    if (!qrcodeDataUrl) {
+        alert('二维码尚未加载完成');
+        return;
+    }
+    const link = document.createElement('a');
+    link.href = qrcodeDataUrl;
+    link.download = '{{ order.order_no }}_qrcode.png';
+    link.click();
+}
+</script>
+{% endblock %}

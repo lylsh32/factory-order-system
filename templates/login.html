@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}登录 - 工厂排单系统{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="factory-icon">🏭</div>
+            <h1>工厂排单系统</h1>
+            <p>智能管理 · 高效生产</p>
+        </div>
+        <div class="login-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('auth.login') }}">
+                <div class="form-floating">
+                    <input type="text" class="form-control" id="username" name="username" 
+                           placeholder="用户名" required autocomplete="username">
+                    <label for="username"><i class="bi bi-person me-2"></i>用户名</label>
+                </div>
+                <div class="form-floating">
+                    <input type="password" class="form-control" id="password" name="password" 
+                           placeholder="密码" required autocomplete="current-password">
+                    <label for="password"><i class="bi bi-lock me-2"></i>密码</label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-login">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>登 录
+                </button>
+            </form>
+            
+            <div class="text-center mt-4 text-muted">
+                <small>首次登录请使用默认账号登录后修改密码</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

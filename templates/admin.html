@@ -1,0 +1,99 @@
+{% extends "dashboard.html" %}
+
+{% block title %}系统管理 - 工厂排单系统{% endblock %}
+
+{% block main_content %}
+<div class="content-wrapper" style="padding: 0;">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('order.dashboard') }}">控制台</a></li>
+            <li class="breadcrumb-item active">系统管理</li>
+        </ol>
+    </nav>
+
+    <h2 class="page-title"><i class="bi bi-gear me-2"></i>系统管理</h2>
+
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-number">{{ stats.total_users }}</div>
+                        <div class="stat-label">用户总数</div>
+                    </div>
+                    <div class="stat-icon total">
+                        <i class="bi bi-people"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-number">{{ stats.active_users }}</div>
+                        <div class="stat-label">活跃用户</div>
+                    </div>
+                    <div class="stat-icon completed">
+                        <i class="bi bi-person-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-number">{{ stats.total_orders }}</div>
+                        <div class="stat-label">订单总数</div>
+                    </div>
+                    <div class="stat-icon producing">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 功能卡片 -->
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-people-fill fs-1 text-primary mb-3"></i>
+                    <h5>用户管理</h5>
+                    <p class="text-muted mb-4">添加、编辑、禁用用户账号</p>
+                    <a href="{{ url_for('admin.user_list') }}" class="btn btn-primary">
+                        <i class="bi bi-arrow-right-circle me-2"></i>进入管理
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-collection fs-1 text-success mb-3"></i>
+                    <h5>订单管理</h5>
+                    <p class="text-muted mb-4">查看和分配所有订单</p>
+                    <a href="{{ url_for('admin.all_orders') }}" class="btn btn-success">
+                        <i class="bi bi-arrow-right-circle me-2"></i>进入管理
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-plus-circle-fill fs-1 text-warning mb-3"></i>
+                    <h5>创建订单</h5>
+                    <p class="text-muted mb-4">创建新的生产订单</p>
+                    <a href="{{ url_for('order.create_order') }}" class="btn btn-warning">
+                        <i class="bi bi-arrow-right-circle me-2"></i>创建订单
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
