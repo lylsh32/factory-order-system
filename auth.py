@@ -55,3 +55,41 @@ def logout():
     logout_user()
     flash('已安全退出', 'info')
     return redirect(url_for('auth.login'))
+
+@auth_bp.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        old_password = request.form.get('old_password', '')
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # 验证
+        if not all([old_password, new_password, confirm_password]):
+            flash('请填写所有字段', 'danger')
+            return redirect(url_for('auth.change_password'))
+        
+        # 验证旧密码
+        if not check_password_hash(current_user.password, old_password):
+            flash('原密码错误', 'danger')
+            return redirect(url_for('auth.change_password'))
+        
+        # 验证新密码长度
+        if len(new_password) < 6:
+            flash('新密码至少需要6个字符', 'danger')
+            return redirect(url_for('auth.change_password'))
+        
+        # 验证两次密码一致
+        if new_password != confirm_password:
+            flash('两次输入的新密码不一致', 'danger')
+            return redirect(url_for('auth.change_password'))
+        
+        # 更新密码
+        current_user.password = generate_password_hash(new_password)
+        db.session.commit()
+        
+        flash('密码修改成功，请重新登录', 'success')
+        logout_user()
+        return redirect(url_for('auth.login'))
+    
+    return render_template('change_password.html')

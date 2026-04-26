@@ -134,3 +134,20 @@ def all_orders():
     orders = Order.query.order_by(Order.created_at.desc()).all()
     workers = User.query.filter_by(role='worker', is_active=True).all()
     return render_template('admin_orders.html', orders=orders, workers=workers)
+
+@admin_bp.route('/admin/user/<int:user_id>/reset_password', methods=['POST'])
+@login_required
+@admin_required
+def reset_user_password(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    # 重置密码为默认密码 123456
+    default_password = '123456'
+    user.password = generate_password_hash(default_password)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True, 
+        'message': f'密码已重置为：{default_password}',
+        'password': default_password
+    })

@@ -60,10 +60,12 @@
                             <td class="text-muted small">{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                             <td class="text-center">
                                 {% if user.id != current_user.id %}
+                                <button class="btn btn-sm btn-outline-info" onclick="resetPassword({{ user.id }})" title="重置密码">
+                                    <i class="bi bi-key"></i>
+                                </button>
                                 <button class="btn btn-sm {{ 'btn-outline-warning' if user.is_active else 'btn-outline-success' }}" 
                                         onclick="toggleStatus({{ user.id }})">
                                     <i class="bi {{ 'bi-ban' if user.is_active else 'bi-check-circle' }}"></i>
-                                    {{ '禁用' if user.is_active else '启用' }}
                                 </button>
                                 <button class="btn btn-sm btn-outline-danger" onclick="deleteUser({{ user.id }})">
                                     <i class="bi bi-trash"></i>
@@ -181,6 +183,29 @@ function deleteUser(userId) {
     .then(data => {
         if (data.success) {
             location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('操作失败，请重试');
+    });
+}
+
+function resetPassword(userId) {
+    if (!confirm('确认重置此用户的密码？密码将被重置为：123456')) return;
+    
+    fetch(`/admin/user/${userId}/reset_password`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message + '\n\n请通知用户尽快修改密码');
         } else {
             alert(data.message);
         }
