@@ -23,157 +23,153 @@
                     </span>
                 </div>
                 <div class="card-body">
-                    <div class="row g-4">
+                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="text-muted small mb-1">订单号</label>
-                                <div class="fw-bold fs-5">{{ order.order_no }}</div>
-                            </div>
+                            <label class="text-muted small mb-1">订单号</label>
+                            <div class="fw-bold fs-5">{{ order.order_no }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="text-muted small mb-1">客户名称</label>
-                                <div class="fw-bold fs-5">{{ order.customer_name }}</div>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <hr class="my-2">
-                        </div>
-                        <div class="col-md-12">
-                            <div class="mb-3">
-                                <label class="text-muted small mb-1">产品名称</label>
-                                <div class="fw-bold">{{ order.product_name }}</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="text-muted small mb-1">长度 (mm)</label>
-                                <div class="fw-500">{{ order.length }}</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="text-muted small mb-1">宽度 (mm)</label>
-                                <div class="fw-500">{{ order.width }}</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label class="text-muted small mb-1">数量</label>
-                                <div class="fw-500">{{ order.quantity }}</div>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="mb-3">
-                                <label class="text-muted small mb-1">备注</label>
-                                <div class="p-3 bg-light rounded">
-                                    {{ order.remark if order.remark else '无' }}
-                                </div>
-                            </div>
+                            <label class="text-muted small mb-1">客户名称</label>
+                            <div class="fw-bold fs-5">{{ order.customer_name }}</div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- 附件列表 -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0"><i class="bi bi-paperclip me-2"></i>图纸附件</h5>
-                </div>
-                <div class="card-body">
-                    {% if order.attachments %}
-                    <div class="list-group">
-                        {% for attachment in order.attachments %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-file-earmark fs-4 text-primary me-3"></i>
-                                <div>
-                                    <div class="fw-500">{{ attachment.filename }}</div>
-                                    <small class="text-muted">上传于 {{ attachment.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                </div>
-                            </div>
-                            <a href="{{ url_for('order.download_attachment', attachment_id=attachment.id) }}" 
-                               class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-download me-1"></i>下载
-                            </a>
-                        </div>
-                        {% endfor %}
+                    
+                    <!-- 产品列表 -->
+                    <h6 class="text-muted mb-3"><i class="bi bi-box me-2"></i>产品清单 (共 {{ order.products|length }} 项)</h6>
+                    
+                    {% if order.products %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>产品名称</th>
+                                    <th>长度(mm)</th>
+                                    <th>宽度(mm)</th>
+                                    <th>数量</th>
+                                    <th>图纸附件</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in order.products %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td class="fw-500">{{ product.product_name }}</td>
+                                    <td>{{ product.length }}</td>
+                                    <td>{{ product.width }}</td>
+                                    <td>{{ product.quantity }}</td>
+                                    <td>
+                                        {% if product.attachments %}
+                                        {% for attachment in product.attachments %}
+                                        <a href="{{ url_for('order.download_attachment', attachment_id=attachment.id) }}" 
+                                           class="btn btn-link btn-sm p-0 me-2">
+                                            <i class="bi bi-file-earmark text-primary"></i> {{ attachment.filename }}
+                                        </a>
+                                        {% endfor %}
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="bg-light">
+                                <tr>
+                                    <td colspan="4" class="text-end fw-bold">合计：</td>
+                                    <td class="fw-bold">{{ order.total_quantity }}</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
-                    {% else %}
-                    <div class="text-center py-4 text-muted">
-                        <i class="bi bi-file-earmark-x fs-1 d-block mb-2"></i>
-                        <p class="mb-0">暂无附件</p>
+                    {% endif %}
+                    
+                    {% if order.remark %}
+                    <div class="mt-3">
+                        <label class="text-muted small mb-1">备注</label>
+                        <div class="p-3 bg-light rounded">
+                            {{ order.remark }}
+                        </div>
                     </div>
                     {% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- 侧边信息 -->
+        <!-- 右侧操作区 -->
         <div class="col-lg-4">
             <!-- 状态操作 -->
+            {% if current_user.role == 'worker' %}
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3">
-                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>操作</h5>
+                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>订单操作</h5>
                 </div>
                 <div class="card-body">
-                    {% if current_user.role == 'worker' %}
-                        {% if order.assigned_to is none %}
-                        <!-- 未分配订单：显示认领按钮 -->
-                        <button class="btn btn-success w-100 mb-2" onclick="claimOrder()">
-                            <i class="bi bi-hand-index me-2"></i>认领此订单
+                    {% if order.assigned_to == current_user.id or order.assigned_to == None %}
+                        {% if order.status == 'pending' %}
+                        {% if order.assigned_to == None %}
+                        <button class="btn btn-warning w-100 mb-2" onclick="claimOrder()">
+                            <i class="bi bi-hand-index me-2"></i>认领订单
                         </button>
-                        {% elif order.assigned_to == current_user.id %}
-                            <!-- 已分配给自己的订单 -->
-                            {% if order.status == 'pending' %}
-                            <button class="btn btn-success w-100 mb-2" onclick="updateStatus('producing')">
-                                <i class="bi bi-play-circle me-2"></i>开始生产
-                            </button>
-                            {% elif order.status == 'producing' %}
-                            <button class="btn btn-primary w-100 mb-2" onclick="updateStatus('completed')">
-                                <i class="bi bi-check-circle me-2"></i>标记完成
-                            </button>
-                            {% elif order.status == 'paused' %}
-                            <button class="btn btn-warning w-100 mb-2" onclick="updateStatus('producing')">
-                                <i class="bi bi-play-circle me-2"></i>恢复生产
-                            </button>
-                            {% endif %}
-                            {% if order.status in ['producing', 'pending'] %}
-                            <button class="btn btn-outline-secondary w-100" onclick="updateStatus('paused')">
-                                <i class="bi bi-pause-circle me-2"></i>暂停生产
-                            </button>
-                            {% endif %}
-                        {% else %}
-                        <div class="text-center text-muted py-3">
-                            <i class="bi bi-lock fs-3 d-block mb-2"></i>
-                            此订单已分配给其他生产人员
-                        </div>
                         {% endif %}
-                    {% endif %}
-                    
-                    {% if current_user.role in ['admin', 'sales'] %}
-                        {% if order.created_by == current_user.id or current_user.role == 'admin' %}
-                            {% if order.status in ['pending', 'paused'] %}
-                            <button class="btn btn-danger w-100 mb-2" onclick="updateStatus('cancelled')">
-                                <i class="bi bi-x-circle me-2"></i>取消订单
-                            </button>
-                            {% endif %}
-                            {% if order.status == 'cancelled' and current_user.role == 'admin' %}
-                            <button class="btn btn-warning w-100 mb-2" onclick="updateStatus('pending')">
-                                <i class="bi bi-arrow-counterclockwise me-2"></i>恢复订单
-                            </button>
-                            {% endif %}
+                        <button class="btn btn-primary w-100 mb-2" onclick="updateStatus('producing')">
+                            <i class="bi bi-play-circle me-2"></i>开始生产
+                        </button>
+                        {% elif order.status == 'producing' %}
+                        <button class="btn btn-primary w-100 mb-2" onclick="updateStatus('completed')">
+                            <i class="bi bi-check-circle me-2"></i>标记完成
+                        </button>
+                        {% elif order.status == 'paused' %}
+                        <button class="btn btn-warning w-100 mb-2" onclick="updateStatus('producing')">
+                            <i class="bi bi-play-circle me-2"></i>恢复生产
+                        </button>
                         {% endif %}
-                    {% endif %}
-                    
-                    {% if current_user.role == 'admin' %}
-                    <hr>
-                    <button class="btn btn-outline-danger w-100" onclick="deleteOrder()">
-                        <i class="bi bi-trash me-2"></i>删除订单
-                    </button>
+                        {% if order.status in ['producing', 'pending'] %}
+                        <button class="btn btn-outline-secondary w-100" onclick="updateStatus('paused')">
+                            <i class="bi bi-pause-circle me-2"></i>暂停生产
+                        </button>
+                        {% endif %}
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-lock fs-3 d-block mb-2"></i>
+                        此订单已分配给其他生产人员
+                    </div>
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
+            
+            {% if current_user.role in ['admin', 'sales'] %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>订单操作</h5>
+                </div>
+                <div class="card-body">
+                    {% if order.created_by == current_user.id or current_user.role == 'admin' %}
+                        {% if order.status in ['pending', 'paused'] %}
+                        <button class="btn btn-danger w-100 mb-2" onclick="updateStatus('cancelled')">
+                            <i class="bi bi-x-circle me-2"></i>取消订单
+                        </button>
+                        {% endif %}
+                        {% if order.status == 'cancelled' and current_user.role == 'admin' %}
+                        <button class="btn btn-warning w-100 mb-2" onclick="updateStatus('pending')">
+                            <i class="bi bi-arrow-counterclockwise me-2"></i>恢复订单
+                        </button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if current_user.role == 'admin' %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <button class="btn btn-outline-danger w-100" onclick="deleteOrder()">
+                        <i class="bi bi-trash me-2"></i>删除订单
+                    </button>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- 订单信息 -->
             <div class="card border-0 shadow-sm mb-4">

@@ -46,9 +46,8 @@
                         <tr>
                             <th class="text-nowrap">订单号</th>
                             <th>客户名称</th>
-                            <th>产品名称</th>
-                            <th>规格 (mm)</th>
-                            <th>数量</th>
+                            <th>产品信息</th>
+                            <th>总数量</th>
                             <th>状态</th>
                             <th>负责人</th>
                             <th>创建时间</th>
@@ -65,13 +64,20 @@
                                 <span class="fw-500">{{ order.customer_name }}</span>
                             </td>
                             <td>
-                                <span>{{ order.product_name }}</span>
-                                {% if order.attachments %}
-                                <i class="bi bi-paperclip text-muted ms-1" title="有 {{ order.attachments|length }} 个附件"></i>
+                                {% if order.products %}
+                                <small>
+                                    {% for product in order.products[:2] %}
+                                    <div>{{ product.product_name }} ({{ product.length }}×{{ product.width }}) ×{{ product.quantity }}</div>
+                                    {% endfor %}
+                                    {% if order.products|length > 2 %}
+                                    <span class="text-muted">+{{ order.products|length - 2 }} 项...</span>
+                                    {% endif %}
+                                </small>
+                                {% else %}
+                                <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
-                            <td>{{ order.length }} × {{ order.width }}</td>
-                            <td>{{ order.quantity }}</td>
+                            <td>{{ order.total_quantity }}</td>
                             <td>
                                 <span class="status-badge status-{{ order.status }}">
                                     {{ order.get_status_text() }}
@@ -84,33 +90,12 @@
                                 <span class="text-muted">未分配</span>
                                 {% endif %}
                             </td>
-                            <td>{{ order.creator.name if order.creator else '-' }}</td>
-                            <td class="text-nowrap text-muted small">
-                                {{ order.created_at.strftime('%Y-%m-%d<br>%H:%M')|safe }}
-                            </td>
-                            <td class="text-center text-nowrap">
+                            <td class="text-muted small">{{ order.created_at.strftime('%m-%d %H:%M') }}</td>
+                            <td class="text-center">
                                 <a href="{{ url_for('order.order_detail', order_id=order.id) }}" 
                                    class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i>
+                                    <i class="bi bi-eye"></i> 查看
                                 </a>
-                                {% if current_user.role == 'worker' and order.assigned_to == current_user.id %}
-                                    {% if order.status == 'pending' %}
-                                    <button class="btn btn-sm btn-success" onclick="updateStatus({{ order.id }}, 'producing')">
-                                        <i class="bi bi-play"></i>
-                                    </button>
-                                    {% elif order.status == 'producing' %}
-                                    <button class="btn btn-sm btn-primary" onclick="updateStatus({{ order.id }}, 'completed')">
-                                        <i class="bi bi-check"></i>
-                                    </button>
-                                    {% endif %}
-                                {% endif %}
-                                {% if current_user.role in ['admin', 'sales'] and order.status in ['pending', 'paused'] %}
-                                    {% if order.created_by == current_user.id or current_user.role == 'admin' %}
-                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder({{ order.id }})">
-                                        <i class="bi bi-x-circle"></i>
-                                    </button>
-                                    {% endif %}
-                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -119,8 +104,8 @@
             </div>
             {% else %}
             <div class="text-center py-5">
-                <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
-                <p class="text-muted">暂无订单数据</p>
+                <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+                <p class="text-muted">暂无订单</p>
                 {% if current_user.role in ['admin', 'sales'] %}
                 <a href="{{ url_for('order.create_order') }}" class="btn btn-primary">
                     <i class="bi bi-plus-circle me-2"></i>创建第一个订单
@@ -131,58 +116,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-function updateStatus(orderId, status) {
-    const statusText = status === 'producing' ? '开始生产' : '完成';
-    if (!confirm(`确认将此订单标记为"${statusText}"？`)) return;
-    
-    fetch(`/order/${orderId}/update_status`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `status=${status}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('操作失败，请重试');
-    });
-}
-
-function cancelOrder(orderId) {
-    if (!confirm('确认取消此订单？')) return;
-    
-    fetch(`/order/${orderId}/update_status`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'status=cancelled'
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('操作失败，请重试');
-    });
-}
-</script>
 {% endblock %}

@@ -111,33 +111,54 @@ def create_order():
     
     if request.method == 'POST':
         customer_name = request.form.get('customer_name', '').strip()
-        product_name = request.form.get('product_name', '').strip()
-        length = request.form.get('length', '')
-        width = request.form.get('width', '')
-        quantity = request.form.get('quantity', '')
         remark = request.form.get('remark', '').strip()
         assigned_to = request.form.get('assigned_to', '')
+        
+        # 获取所有产品数据
+        product_names = request.form.getlist('product_name[]')
+        lengths = request.form.getlist('length[]')
+        widths = request.form.getlist('width[]')
+        quantities = request.form.getlist('quantity[]')
         
         # 验证必填字段
         if not customer_name:
             flash('请填写客户名称', 'danger')
-            return render_template('create_order.html', stats=stats)
+            workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+            return render_template('create_order.html', workers=workers, stats=stats)
         
-        if not product_name:
-            flash('请填写产品名称', 'danger')
-            return render_template('create_order.html', stats=stats)
+        if not product_names or len(product_names) == 0:
+            flash('请至少添加一个产品', 'danger')
+            workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+            return render_template('create_order.html', workers=workers, stats=stats)
         
-        try:
-            length = float(length)
-            width = float(width)
-            quantity = int(quantity)
-        except ValueError:
-            flash('长度、宽度和数量格式不正确', 'danger')
-            return render_template('create_order.html', stats=stats)
-        
-        if quantity <= 0:
-            flash('数量必须大于0', 'danger')
-            return render_template('create_order.html', stats=stats)
+        # 验证每个产品
+        products_data = []
+        for i in range(len(product_names)):
+            if not product_names[i].strip():
+                flash(f'第{i+1}个产品名称不能为空', 'danger')
+                workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+                return render_template('create_order.html', workers=workers, stats=stats)
+            
+            try:
+                length = float(lengths[i])
+                width = float(widths[i])
+                quantity = int(quantities[i])
+            except (ValueError, IndexError):
+                flash(f'第{i+1}个产品的尺寸或数量格式不正确', 'danger')
+                workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+                return render_template('create_order.html', workers=workers, stats=stats)
+            
+            if quantity <= 0:
+                flash(f'第{i+1}个产品的数量必须大于0', 'danger')
+                workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+                return render_template('create_order.html', workers=workers, stats=stats)
+            
+            products_data.append({
+                'product_name': product_names[i].strip(),
+                'length': length,
+                'width': width,
+                'quantity': quantity
+            })
         
         # 生成订单号：ORD-YYYYMMDD-XXX
         today = datetime.now().strftime('%Y%m%d')
@@ -146,13 +167,10 @@ def create_order():
         order_no = f"ORD-{today}-{str(today_orders_count + 1).zfill(3)}"
         
         # 创建订单
+        from models import Product
         order = Order(
             order_no=order_no,
             customer_name=customer_name,
-            product_name=product_name,
-            length=length,
-            width=width,
-            quantity=quantity,
             remark=remark if remark else None,
             status='pending',
             created_by=current_user.id,
@@ -162,30 +180,40 @@ def create_order():
         db.session.add(order)
         db.session.flush()  # 获取订单ID
         
-        # 处理文件上传
-        if 'attachments' in request.files:
-            files = request.files.getlist('attachments')
-            upload_folder = current_app.config['UPLOAD_FOLDER']
+        # 创建产品并处理附件
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        for i, product_data in enumerate(products_data):
+            product = Product(
+                order_id=order.id,
+                product_name=product_data['product_name'],
+                length=product_data['length'],
+                width=product_data['width'],
+                quantity=product_data['quantity']
+            )
+            db.session.add(product)
+            db.session.flush()  # 获取产品ID
             
-            for file in files:
-                if file and file.filename and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    # 添加时间戳避免文件名冲突
-                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-                    new_filename = f"{order.id}_{timestamp}_{filename}"
-                    filepath = os.path.join(upload_folder, new_filename)
-                    
-                    # 确保目录存在
-                    os.makedirs(upload_folder, exist_ok=True)
-                    
-                    file.save(filepath)
-                    
-                    attachment = Attachment(
-                        order_id=order.id,
-                        filename=filename,
-                        filepath=new_filename
-                    )
-                    db.session.add(attachment)
+            # 处理该产品的附件
+            attachment_key = f'attachments_{i}'
+            if attachment_key in request.files:
+                files = request.files.getlist(attachment_key)
+                for file in files:
+                    if file and file.filename and allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                        new_filename = f"{order.id}_{product.id}_{timestamp}_{filename}"
+                        filepath = os.path.join(upload_folder, new_filename)
+                        
+                        file.save(filepath)
+                        
+                        attachment = Attachment(
+                            product_id=product.id,
+                            filename=filename,
+                            filepath=new_filename
+                        )
+                        db.session.add(attachment)
         
         db.session.commit()
         flash(f'订单创建成功！订单号：{order.order_no}', 'success')
@@ -270,7 +298,8 @@ def claim_order(order_id):
 @login_required
 def download_attachment(attachment_id):
     attachment = Attachment.query.get_or_404(attachment_id)
-    order = attachment.order
+    product = attachment.product
+    order = product.order
     
     # 权限检查
     if current_user.role == 'worker' and order.assigned_to != current_user.id:
@@ -290,13 +319,14 @@ def delete_order(order_id):
     
     # 删除附件文件
     upload_folder = current_app.config['UPLOAD_FOLDER']
-    for attachment in order.attachments:
-        try:
-            filepath = os.path.join(upload_folder, attachment.filepath)
-            if os.path.exists(filepath):
-                os.remove(filepath)
-        except Exception:
-            pass
+    for product in order.products:
+        for attachment in product.attachments:
+            try:
+                filepath = os.path.join(upload_folder, attachment.filepath)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            except Exception:
+                pass
     
     db.session.delete(order)
     db.session.commit()

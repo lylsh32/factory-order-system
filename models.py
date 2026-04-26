@@ -38,10 +38,6 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     order_no = db.Column(db.String(50), unique=True, nullable=False)  # 订单号，格式：ORD-YYYYMMDD-XXX
     customer_name = db.Column(db.String(100), nullable=False)  # 客户名称
-    product_name = db.Column(db.String(200), nullable=False)
-    length = db.Column(db.Float, nullable=False)
-    width = db.Column(db.Float, nullable=False)
-    quantity = db.Column(db.Integer, nullable=False)
     remark = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default='pending')  # pending, producing, completed, cancelled, paused
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -50,20 +46,21 @@ class Order(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    attachments = db.relationship('Attachment', backref='order', lazy=True, cascade='all, delete-orphan')
+    products = db.relationship('Product', backref='order', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
-        return f'<Order {self.id}: {self.product_name}>'
+        return f'<Order {self.order_no}>'
+    
+    @property
+    def total_quantity(self):
+        """计算订单总数量"""
+        return sum(p.quantity for p in self.products)
     
     def to_dict(self):
         return {
             'id': self.id,
             'order_no': self.order_no,
             'customer_name': self.customer_name,
-            'product_name': self.product_name,
-            'length': self.length,
-            'width': self.width,
-            'quantity': self.quantity,
             'remark': self.remark,
             'status': self.status,
             'status_text': self.get_status_text(),
@@ -73,7 +70,8 @@ class Order(db.Model):
             'assigned_to_name': self.assignee.name if self.assignee else '',
             'created_at': self.created_at.strftime('%Y-%m-%d %H:%M'),
             'updated_at': self.updated_at.strftime('%Y-%m-%d %H:%M'),
-            'attachments': [a.to_dict() for a in self.attachments]
+            'products': [p.to_dict() for p in self.products],
+            'total_quantity': self.total_quantity
         }
     
     def get_status_text(self):
@@ -86,11 +84,38 @@ class Order(db.Model):
         }
         return status_map.get(self.status, self.status)
 
+class Product(db.Model):
+    __tablename__ = 'products'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    product_name = db.Column(db.String(200), nullable=False)
+    length = db.Column(db.Float, nullable=False)
+    width = db.Column(db.Float, nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    attachments = db.relationship('Attachment', backref='product', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Product {self.product_name}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'product_name': self.product_name,
+            'length': self.length,
+            'width': self.width,
+            'quantity': self.quantity,
+            'attachments': [a.to_dict() for a in self.attachments]
+        }
+
 class Attachment(db.Model):
     __tablename__ = 'attachments'
     
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     filepath = db.Column(db.String(500), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)

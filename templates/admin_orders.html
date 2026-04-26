@@ -28,9 +28,8 @@
                         <tr>
                             <th>订单号</th>
                             <th>客户名称</th>
-                            <th>产品名称</th>
-                            <th>规格</th>
-                            <th>数量</th>
+                            <th>产品信息</th>
+                            <th>总数量</th>
                             <th>状态</th>
                             <th>负责人</th>
                             <th>创建时间</th>
@@ -43,13 +42,18 @@
                             <td class="fw-bold">{{ order.order_no }}</td>
                             <td>{{ order.customer_name }}</td>
                             <td>
-                                {{ order.product_name }}
-                                {% if order.attachments %}
-                                <i class="bi bi-paperclip text-muted ms-1"></i>
+                                {% if order.products %}
+                                <small>
+                                    {% for product in order.products[:2] %}
+                                    <div>{{ product.product_name }} ({{ product.length }}×{{ product.width }})</div>
+                                    {% endfor %}
+                                    {% if order.products|length > 2 %}
+                                    <span class="text-muted">+{{ order.products|length - 2 }} 项...</span>
+                                    {% endif %}
+                                </small>
                                 {% endif %}
                             </td>
-                            <td>{{ order.length }}×{{ order.width }}</td>
-                            <td>{{ order.quantity }}</td>
+                            <td>{{ order.total_quantity }}</td>
                             <td>
                                 <span class="status-badge status-{{ order.status }}">
                                     {{ order.get_status_text() }}
@@ -88,8 +92,11 @@
             </div>
             {% else %}
             <div class="text-center py-5">
-                <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
-                <p class="text-muted">暂无订单数据</p>
+                <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
+                <p class="text-muted">暂无订单</p>
+                <a href="{{ url_for('order.create_order') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>创建第一个订单
+                </a>
             </div>
             {% endif %}
         </div>
@@ -111,15 +118,15 @@ function assignOrder(orderId, workerId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showToast('订单分配成功', 'success');
+            // 静默成功
         } else {
-            showToast(data.message, 'error');
+            alert(data.message);
             location.reload();
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showToast('操作失败，请重试', 'error');
+        alert('操作失败，请重试');
     });
 }
 
@@ -144,19 +151,6 @@ function deleteOrder(orderId) {
         console.error('Error:', error);
         alert('操作失败，请重试');
     });
-}
-
-function showToast(message, type) {
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
-    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 200px; animation: slideIn 0.3s ease';
-    toast.innerHTML = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 2000);
 }
 </script>
 {% endblock %}

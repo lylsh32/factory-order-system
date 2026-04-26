@@ -399,8 +399,8 @@
                                     <tr>
                                         <th>订单号</th>
                                         <th>客户</th>
-                                        <th>产品名称</th>
-                                        <th>规格</th>
+                                        <th>产品数</th>
+                                        <th>总数量</th>
                                         <th>状态</th>
                                         <th>创建时间</th>
                                     </tr>
@@ -410,8 +410,8 @@
                                     <tr onclick="window.location.href='{{ url_for('order.order_detail', order_id=order.id) }}'" style="cursor:pointer;">
                                         <td class="fw-bold">{{ order.order_no }}</td>
                                         <td>{{ order.customer_name }}</td>
-                                        <td>{{ order.product_name }}</td>
-                                        <td>{{ order.length }}×{{ order.width }}</td>
+                                        <td>{{ order.products|length }}</td>
+                                        <td>{{ order.total_quantity }}</td>
                                         <td>
                                             <span class="status-badge status-{{ order.status }}">
                                                 {{ order.get_status_text() }}
