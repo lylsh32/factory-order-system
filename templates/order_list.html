@@ -1,181 +1,128 @@
 {% extends "dashboard.html" %}
 
-{% block title %}用户管理 - 工厂排单系统{% endblock %}
+{% block title %}订单列表 - 工厂排单系统{% endblock %}
 
 {% block main_content %}
-<div class="content-wrapper" style="padding: 0;">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('order.dashboard') }}">控制台</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('admin.index') }}">系统管理</a></li>
-            <li class="breadcrumb-item active">用户管理</li>
-        </ol>
-    </nav>
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="page-title mb-0"><i class="bi bi-people me-2"></i>用户管理</h2>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-            <i class="bi bi-person-plus me-2"></i>添加用户
-        </button>
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="page-title mb-1">订单列表</h4>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{{ url_for('order.dashboard') }}">控制台</a></li>
+                <li class="breadcrumb-item active">订单列表</li>
+            </ol>
+        </nav>
     </div>
+    {% if current_user.role in ['admin', 'sales'] %}
+    <a href="{{ url_for('order.create_order') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>创建订单
+    </a>
+    {% endif %}
+</div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="bg-light">
-                        <tr>
-                            <th>用户名</th>
-                            <th>姓名</th>
-                            <th>角色</th>
-                            <th>状态</th>
-                            <th>创建时间</th>
-                            <th class="text-center">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="user-avatar-sm me-2">{{ user.name[0] }}</div>
-                                    <span class="fw-500">{{ user.username }}</span>
-                                </div>
-                            </td>
-                            <td>{{ user.name }}</td>
-                            <td>
-                                <span class="role-badge role-{{ user.role }}">
-                                    {% if user.role == 'admin' %}管理员
-                                    {% elif user.role == 'sales' %}跟单员
-                                    {% else %}生产人员{% endif %}
-                                </span>
-                            </td>
-                            <td>
-                                {% if user.is_active %}
-                                <span class="badge bg-success">启用</span>
-                                {% else %}
-                                <span class="badge bg-secondary">禁用</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-muted small">{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td class="text-center">
-                                {% if user.id != current_user.id %}
-                                <button class="btn btn-sm btn-outline-primary" onclick="showResetModal({{ user.id }}, '{{ user.username }}')" title="设置密码">
-                                    <i class="bi bi-key"></i>
-                                </button>
-                                <button class="btn btn-sm {{ 'btn-outline-warning' if user.is_active else 'btn-outline-success' }}" 
-                                        onclick="toggleStatus({{ user.id }})">
-                                    <i class="bi {{ 'bi-ban' if user.is_active else 'bi-check-circle' }}"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteUser({{ user.id }})">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                                {% else %}
-                                <span class="text-muted small">当前账号</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+<!-- 筛选栏 -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-auto">
+                <label class="form-label">状态筛选</label>
+                <select name="status" class="form-select">
+                    <option value="">全部状态</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待生产</option>
+                    <option value="producing" {% if status_filter == 'producing' %}selected{% endif %}>进行中</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>已完成</option>
+                    <option value="paused" {% if status_filter == 'paused' %}selected{% endif %}>已暂停</option>
+                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>已取消</option>
+                </select>
             </div>
-        </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-funnel me-1"></i>筛选
+                </button>
+                <a href="{{ url_for('order.order_list') }}" class="btn btn-outline-secondary ms-2">重置</a>
+            </div>
+        </form>
     </div>
 </div>
 
-<!-- 添加用户模态框 -->
-<div class="modal fade" id="addUserModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>添加新用户</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="{{ url_for('admin.add_user') }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">用户名 <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="username" required 
-                               placeholder="登录使用的账号名">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">姓名 <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="name" required 
-                               placeholder="用户真实姓名">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">初始密码 <span class="text-danger">*</span></label>
-                        <input type="password" class="form-control" name="password" required 
-                               placeholder="设置初始密码" minlength="6">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">角色 <span class="text-danger">*</span></label>
-                        <select class="form-select" name="role" required>
-                            <option value="">请选择角色</option>
-                            <option value="admin">管理员</option>
-                            <option value="sales">跟单员</option>
-                            <option value="worker">生产人员</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="submit" class="btn btn-primary">创建用户</button>
-                </div>
-            </form>
+<!-- 订单列表 -->
+<div class="card">
+    <div class="card-body">
+        {% if orders %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>订单号</th>
+                        <th>客户名称</th>
+                        <th>产品数</th>
+                        <th>总数量</th>
+                        <th>状态</th>
+                        {% if current_user.role == 'admin' %}
+                        <th>负责人</th>
+                        {% endif %}
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('order.order_detail', order_id=order.id) }}" class="text-decoration-none fw-medium">
+                                {{ order.order_no }}
+                            </a>
+                        </td>
+                        <td>{{ order.customer_name }}</td>
+                        <td>{{ order.products|length }}</td>
+                        <td>{{ order.total_quantity }}</td>
+                        <td>
+                            <span class="status-badge status-{{ order.status }}">
+                                {{ order.get_status_text() }}
+                            </span>
+                        </td>
+                        {% if current_user.role == 'admin' %}
+                        <td>
+                            {% if order.assignee %}
+                            {{ order.assignee.name }}
+                            {% else %}
+                            <span class="text-muted">未分配</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <a href="{{ url_for('order.order_detail', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> 查看
+                            </a>
+                            {% if current_user.role == 'worker' and order.assigned_to is none %}
+                            <button onclick="claimOrder({{ order.id }})" class="btn btn-sm btn-outline-success ms-1">
+                                <i class="bi bi-hand-index"></i> 认领
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+            <p class="text-muted mt-3 mb-0">暂无订单数据</p>
+        </div>
+        {% endif %}
     </div>
 </div>
-
-<!-- 设置密码模态框 -->
-<div class="modal fade" id="resetPasswordModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-key me-2"></i>设置用户密码</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>用户：<strong id="resetUsername"></strong></p>
-                <input type="hidden" id="resetUserId">
-                <div class="mb-3">
-                    <label class="form-label">新密码</label>
-                    <input type="text" class="form-control" id="newPasswordInput" 
-                           placeholder="输入新密码（至少6位）" minlength="6" value="123456">
-                    <small class="text-muted">留空或太短将使用默认密码 123456</small>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="confirmResetPassword()">确认设置</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-.user-avatar-sm {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 14px;
-}
-</style>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script>
-function toggleStatus(userId) {
-    if (!confirm('确认更改用户状态？')) return;
+function claimOrder(orderId) {
+    if (!confirm('确认认领此订单？')) return;
     
-    fetch(`/admin/user/${userId}/toggle_status`, {
+    fetch(`/order/${orderId}/claim`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -184,64 +131,8 @@ function toggleStatus(userId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            alert(data.message);
             location.reload();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('操作失败，请重试');
-    });
-}
-
-function deleteUser(userId) {
-    if (!confirm('确认删除此用户？此操作不可恢复！')) return;
-    if (!confirm('再次确认：用户的所有数据将永久删除！')) return;
-    
-    fetch(`/admin/user/${userId}/delete`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('操作失败，请重试');
-    });
-}
-
-function showResetModal(userId, username) {
-    document.getElementById('resetUserId').value = userId;
-    document.getElementById('resetUsername').textContent = username;
-    document.getElementById('newPasswordInput').value = '123456';
-    new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
-}
-
-function confirmResetPassword() {
-    const userId = document.getElementById('resetUserId').value;
-    const newPassword = document.getElementById('newPasswordInput').value;
-    
-    fetch(`/admin/user/${userId}/reset_password`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ new_password: newPassword })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal')).hide();
         } else {
             alert(data.message);
         }
