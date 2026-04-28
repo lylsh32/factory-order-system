@@ -21,9 +21,9 @@ def create_app():
     login_manager = init_login_manager(app)
     
     # 注册蓝图
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(order_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(order_bp)
+    app.register_blueprint(auth_bp)
     
     # 创建数据库和默认管理员
     with app.app_context():
