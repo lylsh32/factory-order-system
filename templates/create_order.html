@@ -148,11 +148,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         const preview = activeScreenshot.querySelector('.screenshot-preview');
                         const input = activeScreenshot.querySelector('input[name="screenshot[]"]');
                         
-                        preview.innerHTML = `<img src="${imgData}" style="max-width: 100%; max-height: 100px; border-radius: 5px;">
-                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" onclick="clearScreenshot(this)">
+                        preview.innerHTML = `<img src="${imgData}" class="screenshot-thumb" onclick="showScreenshotModal('${imgData}')" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" title="点击查看大图">
+                            <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 p-0" style="width: 20px; height: 20px; font-size: 10px;" onclick="event.stopPropagation(); clearScreenshot(this)">
                                 <i class="bi bi-x"></i>
                             </button>`;
                         preview.classList.add('has-image');
+                        preview.style.minHeight = '44px';
                         input.value = imgData;
                     };
                     reader.readAsDataURL(blob);
@@ -268,7 +269,17 @@ function clearScreenshot(btn) {
     
     preview.innerHTML = '<i class="bi bi-image"></i> 点击粘贴截图';
     preview.classList.remove('has-image');
+    preview.style.minHeight = '60px';
     input.value = '';
+}
+
+// 弹窗查看大图
+function showScreenshotModal(imgSrc) {
+    const modal = document.getElementById('screenshotModal');
+    const modalImg = document.getElementById('screenshotModalImg');
+    modalImg.src = imgSrc;
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
 }
 </script>
 
@@ -285,4 +296,19 @@ function clearScreenshot(btn) {
     <option value="胡桃木色">
     <option value="橡木色">
 </datalist>
+
+<!-- 截图查看弹窗 -->
+<div class="modal fade" id="screenshotModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-image me-2"></i>截图预览</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <img id="screenshotModalImg" src="" style="max-width: 100%; max-height: 80vh;">
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
