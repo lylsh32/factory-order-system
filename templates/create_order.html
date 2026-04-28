@@ -19,27 +19,21 @@
                 </div>
                 <div class="card-body p-4">
                     <form method="POST" enctype="multipart/form-data" id="orderForm">
-                        <!-- 基本信息 -->
                         <div class="row g-3 mb-4">
                             <div class="col-12">
                                 <h6 class="text-muted mb-3"><i class="bi bi-info-circle me-2"></i>基本信息</h6>
                             </div>
-                            
                             <div class="col-md-6">
                                 <label for="customer_name" class="form-label">客户名称 <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="customer_name" name="customer_name" 
-                                       placeholder="请输入客户名称" required>
+                                <input type="text" class="form-control" id="customer_name" name="customer_name" placeholder="请输入客户名称" required>
                             </div>
-                            
                             <div class="col-md-6">
                                 <label class="form-label">订单号</label>
-                                <input type="text" class="form-control" 
-                                       value="系统自动生成" disabled style="background: #f8f9fa;">
+                                <input type="text" class="form-control" value="系统自动生成" disabled style="background: #f8f9fa;">
                                 <small class="text-muted">提交后自动生成，格式：ORD-YYYYMMDD-XXX</small>
                             </div>
                         </div>
                         
-                        <!-- 产品列表 -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="text-muted mb-0"><i class="bi bi-box me-2"></i>产品信息</h6>
@@ -47,37 +41,33 @@
                                     <i class="bi bi-plus-circle me-1"></i>添加产品
                                 </button>
                             </div>
-                            
                             <div class="table-responsive">
                                 <table class="table table-bordered" id="productsTable">
                                     <thead class="bg-light">
                                         <tr>
-                                            <th style="width: 40px;">#</th>
-                                            <th style="width: 150px;">产品名称 <span class="text-danger">*</span></th>
-                                            <th style="width: 70px;">厚度(mm)</th>
-                                            <th style="width: 80px;">颜色</th>
-                                            <th style="width: 80px;">长度 <span class="text-danger">*</span></th>
-                                            <th style="width: 80px;">宽度 <span class="text-danger">*</span></th>
-                                            <th style="width: 60px;">数量 <span class="text-danger">*</span></th>
+                                            <th style="width: 35px;">#</th>
+                                            <th style="width: 140px;">产品名称</th>
+                                            <th style="width: 70px;">厚度</th>
+                                            <th style="width: 70px;">颜色</th>
+                                            <th style="width: 70px;">长度</th>
+                                            <th style="width: 70px;">宽度</th>
+                                            <th style="width: 55px;">数量</th>
                                             <th>图纸/截图</th>
-                                            <th style="width: 50px;">操作</th>
+                                            <th style="width: 45px;">操作</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="productsBody">
-                                    </tbody>
+                                    <tbody id="productsBody"></tbody>
                                 </table>
                             </div>
                             <div class="d-flex gap-3">
-                                <small class="text-muted">图纸支持 .dwg、.dxf、.pdf</small>
-                                <small class="text-primary"><i class="bi bi-lightbulb me-1"></i>截图可 Ctrl+V 粘贴</small>
+                                <small class="text-muted">图纸: .dwg/.dxf/.pdf</small>
+                                <small class="text-primary"><i class="bi bi-lightbulb me-1"></i>截图 Ctrl+V 粘贴</small>
                             </div>
                         </div>
                         
                         {% if current_user.role == 'admin' and workers %}
                         <div class="row g-3 mb-4">
-                            <div class="col-12">
-                                <h6 class="text-muted mb-3"><i class="bi bi-person-check me-2"></i>订单分配</h6>
-                            </div>
+                            <div class="col-12"><h6 class="text-muted mb-3"><i class="bi bi-person-check me-2"></i>订单分配</h6></div>
                             <div class="col-md-6">
                                 <label for="assigned_to" class="form-label">分配给生产人员</label>
                                 <select class="form-select" id="assigned_to" name="assigned_to">
@@ -91,20 +81,15 @@
                         {% endif %}
                         
                         <div class="row g-3 mb-4">
-                            <div class="col-12">
-                                <h6 class="text-muted mb-3"><i class="bi bi-chat-left-text me-2"></i>其他信息</h6>
-                            </div>
+                            <div class="col-12"><h6 class="text-muted mb-3"><i class="bi bi-chat-left-text me-2"></i>其他信息</h6></div>
                             <div class="col-12">
                                 <label for="remark" class="form-label">备注说明</label>
-                                <textarea class="form-control" id="remark" name="remark" rows="3" 
-                                          placeholder="如有特殊要求请在此说明"></textarea>
+                                <textarea class="form-control" id="remark" name="remark" rows="3" placeholder="如有特殊要求请在此说明"></textarea>
                             </div>
                         </div>
                         
                         <div class="d-flex gap-3 pt-4 border-top">
-                            <button type="submit" class="btn btn-primary px-5">
-                                <i class="bi bi-check-circle me-2"></i>提交订单
-                            </button>
+                            <button type="submit" class="btn btn-primary px-5"><i class="bi bi-check-circle me-2"></i>提交订单</button>
                             <a href="{{ url_for('order.order_list') }}" class="btn btn-outline-secondary px-5">取消</a>
                         </div>
                     </form>
@@ -122,7 +107,6 @@ let productIndex = 0;
 
 document.addEventListener('DOMContentLoaded', function() {
     addProductRow();
-    
     document.addEventListener('paste', function(e) {
         const items = e.clipboardData.items;
         for (let item of items) {
@@ -136,8 +120,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         const imgData = e.target.result;
                         const preview = activeScreenshot.querySelector('.screenshot-preview');
                         const input = activeScreenshot.querySelector('input[name="screenshot[]"]');
-                        preview.innerHTML = `<img src="${imgData}" onclick="showScreenshotModal('${imgData}')" style="width: 48px; height: 48px; object-fit: cover; border-radius: 3px; cursor: pointer;" title="点击查看大图">
-                            <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 p-0" style="width: 16px; height: 16px; font-size: 9px;" onclick="event.stopPropagation(); clearScreenshot(this)"><i class="bi bi-x"></i></button>`;
+                        preview.innerHTML = `<img src="${imgData}" onclick="showScreenshotModal('${imgData}')" style="width: 34px; height: 34px; object-fit: cover; border-radius: 2px; cursor: pointer;" title="点击查看大图">
+                            <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 p-0" style="width: 14px; height: 14px; font-size: 8px;" onclick="event.stopPropagation(); clearScreenshot(this)"><i class="bi bi-x"></i></button>`;
                         preview.classList.add('has-image');
                         input.value = imgData;
                     };
@@ -156,28 +140,26 @@ function addProductRow() {
     tr.id = `product-row-${productIndex}`;
     tr.innerHTML = `
         <td class="text-center align-middle">${productIndex}</td>
-        <td><input type="text" class="form-control form-control-sm" name="product_name[]" placeholder="产品名称" required></td>
+        <td><input type="text" class="form-control form-control-sm" name="product_name[]" placeholder="名称" required></td>
         <td><input type="number" class="form-control form-control-sm" name="thickness[]" placeholder="厚度" step="0.1" min="0"></td>
         <td><input type="text" class="form-control form-control-sm" name="color[]" placeholder="颜色" list="colorList"></td>
         <td><input type="number" class="form-control form-control-sm" name="length[]" placeholder="长度" step="0.01" min="0" required></td>
         <td><input type="number" class="form-control form-control-sm" name="width[]" placeholder="宽度" step="0.01" min="0" required></td>
         <td><input type="number" class="form-control form-control-sm" name="quantity[]" placeholder="数量" min="1" required></td>
-        <td>
+        <td style="min-width: 160px;">
             <input type="hidden" name="screenshot[]">
-            <div class="d-flex align-items-center gap-2">
-                <div class="screenshot-area position-relative border rounded p-1" tabindex="0" 
-                     style="width: 50px; height: 50px; background: #f8f9fa; cursor: pointer; flex-shrink: 0;"
+            <div class="d-flex align-items-center gap-1">
+                <div class="screenshot-area position-relative border rounded" tabindex="0" 
+                     style="width: 36px; height: 36px; background: #f8f9fa; cursor: pointer; flex-shrink: 0;"
                      onclick="this.focus()" title="点击后 Ctrl+V 粘贴截图">
-                    <div class="screenshot-preview text-center text-muted small d-flex align-items-center justify-content-center h-100">
-                        <i class="bi bi-image"></i>
+                    <div class="screenshot-preview text-center text-muted d-flex align-items-center justify-content-center h-100">
+                        <i class="bi bi-image" style="font-size: 14px;"></i>
                     </div>
                 </div>
-                <div class="flex-grow-1">
-                    <input type="file" class="form-control form-control-sm" name="attachments_${productIndex - 1}" 
-                           multiple accept=".dwg,.dxf,.pdf" style="font-size: 11px;">
-                    <div class="file-list small text-muted mt-1" id="file-list-${productIndex}"></div>
-                </div>
+                <input type="file" class="form-control form-control-sm flex-grow-1" name="attachments_${productIndex - 1}" 
+                       multiple accept=".dwg,.dxf,.pdf" style="font-size: 11px; padding: 2px 6px;">
             </div>
+            <div class="file-list small text-muted" id="file-list-${productIndex}" style="font-size: 10px;"></div>
         </td>
         <td class="text-center align-middle">
             <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductRow(${productIndex})"><i class="bi bi-trash"></i></button>
@@ -202,15 +184,14 @@ function updateRowNumbers() {
 
 function updateFileList(input, fileListDiv) {
     if (input.files.length === 0) { fileListDiv.innerHTML = ''; return; }
-    let html = `<span class="text-success"><i class="bi bi-check-circle me-1"></i>已选 ${input.files.length} 个文件</span>`;
-    fileListDiv.innerHTML = html;
+    fileListDiv.innerHTML = `<span class="text-success">✓ ${input.files.length}个文件</span>`;
 }
 
 function clearScreenshot(btn) {
     const preview = btn.parentElement;
     const area = preview.parentElement;
     area.querySelector('input[name="screenshot[]"]').value = '';
-    preview.innerHTML = '<i class="bi bi-image"></i>';
+    preview.innerHTML = '<i class="bi bi-image" style="font-size: 14px;"></i>';
     preview.classList.remove('has-image');
 }
 
