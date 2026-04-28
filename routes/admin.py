@@ -141,22 +141,22 @@ def all_orders():
 def reset_user_password(user_id):
     user = User.query.get_or_404(user_id)
     
-    # 重置密码为默认密码 123456
-    default_password = '123456'
-    user.password = generate_password_hash(default_password)
+    # 获取新密码（如果有）
+    data = request.get_json() if request.is_json else {}
+    new_password = data.get('new_password', '123456')
+    
+    # 如果新密码太短，使用默认密码
+    if len(new_password) < 6:
+        new_password = '123456'
+    
+    user.password = generate_password_hash(new_password)
     db.session.commit()
     
     return jsonify({
-        'success': True, 
-        'message': f'密码已重置为：{default_password}',
-        'password': default_password
+        'success': True,
+        'message': f'密码已重置为：{new_password}',
+        'password': new_password
     })
-
-@admin_bp.route('/admin/order_overview')
-@login_required
-@admin_required
-def order_overview():
-    """订单总览页面"""
     from models import Product
     from sqlalchemy import func
     from datetime import datetime, timedelta
