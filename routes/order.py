@@ -118,7 +118,10 @@ def create_order():
         product_names = request.form.getlist('product_name[]')
         lengths = request.form.getlist('length[]')
         widths = request.form.getlist('width[]')
+        thicknesses = request.form.getlist('thickness[]')
+        colors = request.form.getlist('color[]')
         quantities = request.form.getlist('quantity[]')
+        screenshots = request.form.getlist('screenshot[]')
         
         # 验证必填字段
         if not customer_name:
@@ -153,11 +156,28 @@ def create_order():
                 workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
                 return render_template('create_order.html', workers=workers, stats=stats)
             
+            # 厚度（可选）
+            thickness = None
+            try:
+                if i < len(thicknesses) and thicknesses[i]:
+                    thickness = float(thicknesses[i])
+            except ValueError:
+                pass
+            
+            # 颜色（可选）
+            color = colors[i].strip() if i < len(colors) else None
+            
+            # 截图（可选）
+            screenshot = screenshots[i] if i < len(screenshots) else None
+            
             products_data.append({
                 'product_name': product_names[i].strip(),
                 'length': length,
                 'width': width,
-                'quantity': quantity
+                'thickness': thickness,
+                'color': color,
+                'quantity': quantity,
+                'screenshot': screenshot if screenshot else None
             })
         
         # 生成订单号：ORD-YYYYMMDD-XXX
@@ -190,7 +210,10 @@ def create_order():
                 product_name=product_data['product_name'],
                 length=product_data['length'],
                 width=product_data['width'],
-                quantity=product_data['quantity']
+                thickness=product_data['thickness'],
+                color=product_data['color'],
+                quantity=product_data['quantity'],
+                screenshot=product_data['screenshot']
             )
             db.session.add(product)
             db.session.flush()  # 获取产品ID

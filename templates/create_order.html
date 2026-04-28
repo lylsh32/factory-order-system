@@ -52,13 +52,15 @@
                                 <table class="table table-bordered" id="productsTable">
                                     <thead class="bg-light">
                                         <tr>
-                                            <th style="width: 50px;">#</th>
-                                            <th style="width: 200px;">产品名称 <span class="text-danger">*</span></th>
-                                            <th style="width: 120px;">长度(mm) <span class="text-danger">*</span></th>
-                                            <th style="width: 120px;">宽度(mm) <span class="text-danger">*</span></th>
-                                            <th style="width: 100px;">数量 <span class="text-danger">*</span></th>
-                                            <th>图纸附件</th>
-                                            <th style="width: 80px;">操作</th>
+                                            <th style="width: 40px;">#</th>
+                                            <th style="width: 180px;">产品名称 <span class="text-danger">*</span></th>
+                                            <th style="width: 90px;">长度(mm) <span class="text-danger">*</span></th>
+                                            <th style="width: 90px;">宽度(mm) <span class="text-danger">*</span></th>
+                                            <th style="width: 80px;">厚度(mm)</th>
+                                            <th style="width: 100px;">颜色</th>
+                                            <th style="width: 70px;">数量 <span class="text-danger">*</span></th>
+                                            <th>图纸/截图</th>
+                                            <th style="width: 60px;">操作</th>
                                         </tr>
                                     </thead>
                                     <tbody id="productsBody">
@@ -66,7 +68,10 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <small class="text-muted">支持 .dwg、.dxf、.pdf 格式，单文件最大 20MB</small>
+                            <div class="d-flex gap-3">
+                                <small class="text-muted">图纸支持 .dwg、.dxf、.pdf 格式，单文件最大 20MB</small>
+                                <small class="text-primary"><i class="bi bi-lightbulb me-1"></i>截图可直接 Ctrl+V 粘贴到输入框</small>
+                            </div>
                         </div>
                         
                         <!-- 分配人员 -->
@@ -125,6 +130,37 @@ let productIndex = 0;
 // 页面加载时添加第一个产品行
 document.addEventListener('DOMContentLoaded', function() {
     addProductRow();
+    
+    // 全局粘贴事件监听
+    document.addEventListener('paste', function(e) {
+        const items = e.clipboardData.items;
+        for (let item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                e.preventDefault();
+                
+                // 找到当前聚焦的截图区域
+                const activeScreenshot = document.querySelector('.screenshot-area:focus');
+                if (activeScreenshot) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imgData = e.target.result;
+                        const preview = activeScreenshot.querySelector('.screenshot-preview');
+                        const input = activeScreenshot.querySelector('input[name="screenshot[]"]');
+                        
+                        preview.innerHTML = `<img src="${imgData}" style="max-width: 100%; max-height: 100px; border-radius: 5px;">
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" onclick="clearScreenshot(this)">
+                                <i class="bi bi-x"></i>
+                            </button>`;
+                        preview.classList.add('has-image');
+                        input.value = imgData;
+                    };
+                    reader.readAsDataURL(blob);
+                }
+                break;
+            }
+        }
+    });
 });
 
 function addProductRow() {
@@ -147,12 +183,28 @@ function addProductRow() {
                    placeholder="宽度" step="0.01" min="0" required>
         </td>
         <td>
+            <input type="number" class="form-control form-control-sm" name="thickness[]" 
+                   placeholder="厚度" step="0.1" min="0">
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm" name="color[]" 
+                   placeholder="颜色" list="colorList">
+        </td>
+        <td>
             <input type="number" class="form-control form-control-sm" name="quantity[]" 
                    placeholder="数量" min="1" required>
         </td>
         <td>
-            <input type="file" class="form-control form-control-sm" name="attachments_${productIndex - 1}" 
-                   multiple accept=".dwg,.dxf,.pdf">
+            <input type="hidden" name="screenshot[]">
+            <div class="screenshot-area position-relative border rounded p-2" tabindex="0" 
+                 style="min-height: 60px; background: #f8f9fa; cursor: pointer;"
+                 onclick="this.focus()" title="点击后按 Ctrl+V 粘贴截图">
+                <div class="screenshot-preview text-center text-muted small">
+                    <i class="bi bi-image"></i> 点击粘贴截图
+                </div>
+            </div>
+            <input type="file" class="form-control form-control-sm mt-1" name="attachments_${productIndex - 1}" 
+                   multiple accept=".dwg,.dxf,.pdf" style="font-size: 12px;">
             <div class="file-list small text-muted mt-1" id="file-list-${productIndex}"></div>
         </td>
         <td class="text-center align-middle">
@@ -208,5 +260,29 @@ function updateFileList(input, fileListDiv) {
     }
     fileListDiv.innerHTML = html;
 }
+
+function clearScreenshot(btn) {
+    const preview = btn.parentElement;
+    const area = preview.parentElement;
+    const input = area.querySelector('input[name="screenshot[]"]');
+    
+    preview.innerHTML = '<i class="bi bi-image"></i> 点击粘贴截图';
+    preview.classList.remove('has-image');
+    input.value = '';
+}
 </script>
+
+<!-- 常用颜色列表 -->
+<datalist id="colorList">
+    <option value="白色">
+    <option value="黑色">
+    <option value="红色">
+    <option value="蓝色">
+    <option value="绿色">
+    <option value="黄色">
+    <option value="灰色">
+    <option value="原木色">
+    <option value="胡桃木色">
+    <option value="橡木色">
+</datalist>
 {% endblock %}

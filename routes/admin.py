@@ -318,7 +318,7 @@ def export_orders():
     )
     
     # 写入表头
-    headers = ['订单号', '客户名称', '产品名称', '长度(mm)', '宽度(mm)', '数量', '状态', '负责人', '创建时间', '备注']
+    headers = ['订单号', '客户名称', '产品名称', '长度(mm)', '宽度(mm)', '厚度(mm)', '颜色', '数量', '状态', '负责人', '创建时间', '备注']
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=header)
         cell.font = header_font_white
@@ -335,11 +335,13 @@ def export_orders():
             ws.cell(row=row_num, column=3, value=product.product_name).border = border
             ws.cell(row=row_num, column=4, value=product.length).border = border
             ws.cell(row=row_num, column=5, value=product.width).border = border
-            ws.cell(row=row_num, column=6, value=product.quantity).border = border
-            ws.cell(row=row_num, column=7, value=order.get_status_text()).border = border
-            ws.cell(row=row_num, column=8, value=order.assignee.name if order.assignee else '未分配').border = border
-            ws.cell(row=row_num, column=9, value=order.created_at.strftime('%Y-%m-%d %H:%M')).border = border
-            ws.cell(row=row_num, column=10, value=order.remark or '').border = border
+            ws.cell(row=row_num, column=6, value=product.thickness if product.thickness else '').border = border
+            ws.cell(row=row_num, column=7, value=product.color if product.color else '').border = border
+            ws.cell(row=row_num, column=8, value=product.quantity).border = border
+            ws.cell(row=row_num, column=9, value=order.get_status_text()).border = border
+            ws.cell(row=row_num, column=10, value=order.assignee.name if order.assignee else '未分配').border = border
+            ws.cell(row=row_num, column=11, value=order.created_at.strftime('%Y-%m-%d %H:%M')).border = border
+            ws.cell(row=row_num, column=12, value=order.remark or '').border = border
             row_num += 1
     
     # 调整列宽
@@ -348,11 +350,13 @@ def export_orders():
     ws.column_dimensions['C'].width = 20
     ws.column_dimensions['D'].width = 12
     ws.column_dimensions['E'].width = 12
-    ws.column_dimensions['F'].width = 10
+    ws.column_dimensions['F'].width = 12
     ws.column_dimensions['G'].width = 10
-    ws.column_dimensions['H'].width = 12
-    ws.column_dimensions['I'].width = 18
-    ws.column_dimensions['J'].width = 30
+    ws.column_dimensions['H'].width = 10
+    ws.column_dimensions['I'].width = 10
+    ws.column_dimensions['J'].width = 12
+    ws.column_dimensions['K'].width = 18
+    ws.column_dimensions['L'].width = 30
     
     # 创建客户汇总表
     ws2 = wb.create_sheet("客户汇总")

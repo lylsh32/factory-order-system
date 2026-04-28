@@ -92,7 +92,10 @@ class Product(db.Model):
     product_name = db.Column(db.String(200), nullable=False)
     length = db.Column(db.Float, nullable=False)
     width = db.Column(db.Float, nullable=False)
+    thickness = db.Column(db.Float, nullable=True)  # 厚度(mm)
+    color = db.Column(db.String(50), nullable=True)  # 颜色
     quantity = db.Column(db.Integer, nullable=False)
+    screenshot = db.Column(db.Text, nullable=True)  # 截图(base64存储)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -107,7 +110,10 @@ class Product(db.Model):
             'product_name': self.product_name,
             'length': self.length,
             'width': self.width,
+            'thickness': self.thickness,
+            'color': self.color,
             'quantity': self.quantity,
+            'screenshot': self.screenshot,
             'attachments': [a.to_dict() for a in self.attachments]
         }
 
