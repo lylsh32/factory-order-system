@@ -58,36 +58,48 @@
 
     <!-- 功能卡片 -->
     <div class="row g-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-5">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-bar-chart-fill fs-1 text-info mb-3"></i>
+                    <h5>订单总览</h5>
+                    <p class="text-muted mb-3 small">查询、统计、导出订单</p>
+                    <a href="{{ url_for('admin.order_overview') }}" class="btn btn-info">
+                        <i class="bi bi-arrow-right-circle me-2"></i>进入查看
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
                     <i class="bi bi-people-fill fs-1 text-primary mb-3"></i>
                     <h5>用户管理</h5>
-                    <p class="text-muted mb-4">添加、编辑、禁用用户账号</p>
+                    <p class="text-muted mb-3 small">添加、编辑、禁用用户账号</p>
                     <a href="{{ url_for('admin.user_list') }}" class="btn btn-primary">
                         <i class="bi bi-arrow-right-circle me-2"></i>进入管理
                     </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-5">
+                <div class="card-body text-center py-4">
                     <i class="bi bi-collection fs-1 text-success mb-3"></i>
                     <h5>订单管理</h5>
-                    <p class="text-muted mb-4">查看和分配所有订单</p>
+                    <p class="text-muted mb-3 small">查看和分配所有订单</p>
                     <a href="{{ url_for('admin.all_orders') }}" class="btn btn-success">
                         <i class="bi bi-arrow-right-circle me-2"></i>进入管理
                     </a>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-5">
+                <div class="card-body text-center py-4">
                     <i class="bi bi-plus-circle-fill fs-1 text-warning mb-3"></i>
                     <h5>创建订单</h5>
-                    <p class="text-muted mb-4">创建新的生产订单</p>
+                    <p class="text-muted mb-3 small">创建新的生产订单</p>
                     <a href="{{ url_for('order.create_order') }}" class="btn btn-warning">
                         <i class="bi bi-arrow-right-circle me-2"></i>创建订单
                     </a>
