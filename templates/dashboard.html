@@ -20,7 +20,6 @@
             background-color: #f5f6fa;
         }
         
-        /* 侧边栏 */
         .sidebar {
             position: fixed;
             top: 0;
@@ -63,7 +62,6 @@
             background: var(--primary-color);
         }
         
-        /* 菜单样式 */
         .nav-menu {
             padding: 0;
             list-style: none;
@@ -99,7 +97,6 @@
             font-size: 0.7rem;
         }
         
-        /* 子菜单 */
         .submenu {
             list-style: none;
             padding: 0;
@@ -112,7 +109,6 @@
             font-size: 0.9rem;
         }
         
-        /* 主内容区 */
         .main-content {
             margin-left: 250px;
             min-height: 100vh;
@@ -127,23 +123,10 @@
             align-items: center;
         }
         
-        .breadcrumb {
-            margin: 0;
-            font-size: 0.9rem;
-        }
-        
-        .user-dropdown {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        /* 内容页面 */
         .page-content {
             padding: 25px;
         }
         
-        /* 统计卡片 */
         .stat-card {
             background: white;
             border-radius: 10px;
@@ -151,22 +134,6 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         
-        .stat-card .icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-        
-        .stat-card .number {
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-        
-        /* 折叠菜单指示器 */
         .menu-toggle {
             float: right;
             transition: transform 0.3s;
@@ -176,7 +143,6 @@
             transform: rotate(-90deg);
         }
         
-        /* 响应式 */
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -192,45 +158,39 @@
     </style>
 </head>
 <body>
-    <!-- 侧边栏 -->
     <nav class="sidebar">
         <div class="sidebar-header">
-            <h3><i class="bi bi-factory me-2"></i>工厂排单系统</h3>
+            <h3><i class="bi bi-factory me-2"></i>排单系统 v1.0</h3>
             <div class="subtitle">生产管理系统</div>
         </div>
         
         <div class="user-info">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="fw-bold">{{ current_user.full_name or current_user.username }}</div>
-                    <span class="role-badge">{{ current_user.get_role_display() }}</span>
+                    <div class="fw-bold">{{ current_user.name or current_user.username }}</div>
+                    <span class="role-badge">
+                        {% if current_user.role == 'admin' %}管理员
+                        {% elif current_user.role == 'sales' %}跟单员
+                        {% else %}生产人员{% endif %}
+                    </span>
                 </div>
                 <i class="bi bi-person-circle" style="font-size: 1.5rem; opacity: 0.7;"></i>
             </div>
         </div>
         
         <ul class="nav-menu">
-            <!-- 控制台（首页） -->
+            <!-- 控制台 -->
             <li class="nav-item">
-                <a href="{{ url_for('main.dashboard') }}" class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                <a href="{{ url_for('order.dashboard') }}" class="nav-link {% if request.endpoint == 'order.dashboard' %}active{% endif %}">
                     <i class="bi bi-speedometer2"></i>
                     <span>控制台</span>
                 </a>
             </li>
             
-            <!-- 报价管理 -->
+            <!-- 创建订单 -->
+            {% if current_user.role in ['admin', 'sales'] %}
             <li class="nav-item">
-                <a href="{{ url_for('order.quoting_list') }}" class="nav-link {% if request.endpoint == 'order.quoting_list' %}active{% endif %}">
-                    <i class="bi bi-chat-left-text"></i>
-                    <span>报价管理</span>
-                    <span class="badge bg-warning text-dark">quoting</span>
-                </a>
-            </li>
-            
-            <!-- 创建订单（跟单员/管理员可见） -->
-            {% if current_user.role in ['admin', 'admin_assistant', 'clerks'] %}
-            <li class="nav-item">
-                <a href="{{ url_for('order.create_order') }}" class="nav-link {% if request.endpoint == 'order.create_order' %}active{% endif %}">
+                <a href="{{ url_for('order.create_order') }}" class="nav-link">
                     <i class="bi bi-file-plus"></i>
                     <span>创建订单</span>
                 </a>
@@ -239,34 +199,13 @@
             
             <!-- 订单列表 -->
             <li class="nav-item">
-                <a href="{{ url_for('order.order_list') }}" class="nav-link {% if request.endpoint == 'order.order_list' %}active{% endif %}">
+                <a href="{{ url_for('order.order_list') }}" class="nav-link">
                     <i class="bi bi-list-ul"></i>
                     <span>订单列表</span>
                 </a>
             </li>
             
-            <!-- 生产任务（生产人员可见） -->
-            {% if current_user.role == 'production' %}
-            <li class="nav-item">
-                <a href="{{ url_for('order.my_tasks') }}" class="nav-link {% if request.endpoint == 'order.my_tasks' %}active{% endif %}">
-                    <i class="bi bi-hammer"></i>
-                    <span>生产任务</span>
-                    <span class="badge bg-primary">我的</span>
-                </a>
-            </li>
-            {% endif %}
-            
-            <!-- 付款记录（管理员可见） -->
-            {% if current_user.role == 'admin' %}
-            <li class="nav-item">
-                <a href="{{ url_for('order.payment_records') }}" class="nav-link {% if request.endpoint == 'order.payment_records' %}active{% endif %}">
-                    <i class="bi bi-cash-stack"></i>
-                    <span>付款记录</span>
-                </a>
-            </li>
-            {% endif %}
-            
-            <!-- 系统管理（管理员可见） -->
+            <!-- 管理员菜单 -->
             {% if current_user.role == 'admin' %}
             <li class="nav-item">
                 <a href="#systemMenu" class="nav-link" data-bs-toggle="collapse">
@@ -274,16 +213,16 @@
                     <span>系统管理</span>
                     <i class="bi bi-chevron-down menu-toggle"></i>
                 </a>
-                <ul class="submenu collapse" id="systemMenu">
-                    <li>
-                        <a href="{{ url_for('main.user_list') }}" class="nav-link {% if request.endpoint == 'main.user_list' %}active{% endif %}">
+                <ul class="submenu collapse show" id="systemMenu">
+                    <li class="nav-item">
+                        <a href="{{ url_for('admin.user_list') }}" class="nav-link">
                             <i class="bi bi-people"></i>
                             <span>用户管理</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="{{ url_for('order.all_orders') }}" class="nav-link {% if request.endpoint == 'order.all_orders' %}active{% endif %}">
-                            <i class="bi bi-collection"></i>
+                    <li class="nav-item">
+                        <a href="{{ url_for('admin.all_orders') }}" class="nav-link">
+                            <i class="bi bi-folder"></i>
                             <span>全部订单</span>
                         </a>
                     </li>
@@ -291,12 +230,9 @@
             </li>
             {% endif %}
             
-            <!-- 分隔线 -->
-            <li class="nav-item"><hr style="border-color: rgba(255,255,255,0.1); margin: 10px 20px;"></li>
-            
             <!-- 修改密码 -->
             <li class="nav-item">
-                <a href="{{ url_for('auth.change_password') }}" class="nav-link {% if request.endpoint == 'auth.change_password' %}active{% endif %}">
+                <a href="{{ url_for('auth.change_password') }}" class="nav-link">
                     <i class="bi bi-key"></i>
                     <span>修改密码</span>
                 </a>
@@ -305,29 +241,41 @@
             <!-- 退出登录 -->
             <li class="nav-item">
                 <a href="{{ url_for('auth.logout') }}" class="nav-link">
-                    <i class="bi bi-box-arrow-right"></i>
+                    <i class="bi bi-box-arrow-left"></i>
                     <span>退出登录</span>
                 </a>
             </li>
         </ul>
     </nav>
     
-    <!-- 主内容区 -->
     <div class="main-content">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="container-fluid p-3">
+        <div class="top-bar">
+            <div>
+                <h5 class="mb-1">{% block page_title %}控制台{% endblock %}</h5>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        {% block breadcrumb %}
+                        <li class="breadcrumb-item"><a href="{{ url_for('order.dashboard') }}">首页</a></li>
+                        {% endblock %}
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        
+        <div class="page-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
                     {% for category, message in messages %}
                         <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                             {{ message }}
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
                     {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
+                {% endif %}
+            {% endwith %}
+            
+            {% block main_content %}{% endblock %}
+        </div>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
