@@ -12,12 +12,10 @@
             --sidebar-hover: #16213e;
             --primary-color: #667eea;
         }
-        
         body {
             background: #f5f7fa;
             font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
         }
-        
         .sidebar {
             position: fixed;
             top: 0;
@@ -30,7 +28,6 @@
             z-index: 1000;
             overflow-y: auto;
         }
-        
         .sidebar-brand {
             color: white;
             text-align: center;
@@ -38,22 +35,9 @@
             border-bottom: 1px solid rgba(255,255,255,0.1);
             margin-bottom: 20px;
         }
-        
-        .sidebar-brand h3 {
-            margin: 0;
-            font-weight: 600;
-        }
-        
-        .sidebar-brand small {
-            color: rgba(255,255,255,0.6);
-        }
-        
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
+        .sidebar-brand h3 { margin: 0; font-weight: 600; }
+        .sidebar-brand small { color: rgba(255,255,255,0.6); }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; }
         .sidebar-menu li a {
             display: flex;
             align-items: center;
@@ -63,26 +47,22 @@
             transition: all 0.3s;
             border-left: 3px solid transparent;
         }
-        
         .sidebar-menu li a:hover,
         .sidebar-menu li a.active {
             background: var(--sidebar-hover);
             color: white;
             border-left-color: var(--primary-color);
         }
-        
         .sidebar-menu li a i {
             font-size: 1.2rem;
             margin-right: 12px;
             width: 24px;
             text-align: center;
         }
-        
         .main-content {
             margin-left: 260px;
             min-height: 100vh;
         }
-        
         .topbar {
             background: white;
             padding: 15px 30px;
@@ -91,13 +71,7 @@
             justify-content: space-between;
             align-items: center;
         }
-        
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
+        .user-info { display: flex; align-items: center; gap: 15px; }
         .user-avatar {
             width: 40px;
             height: 40px;
@@ -109,11 +83,7 @@
             justify-content: center;
             font-weight: 600;
         }
-        
-        .content-wrapper {
-            padding: 30px;
-        }
-        
+        .content-wrapper { padding: 30px; }
         .stat-card {
             background: white;
             border-radius: 15px;
@@ -121,11 +91,7 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.05);
             transition: transform 0.3s;
         }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        
+        .stat-card:hover { transform: translateY(-5px); }
         .stat-icon {
             width: 60px;
             height: 60px;
@@ -135,41 +101,19 @@
             justify-content: center;
             font-size: 1.8rem;
         }
-        
         .stat-icon.total { background: rgba(102, 126, 234, 0.1); color: #667eea; }
         .stat-icon.pending { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
         .stat-icon.producing { background: rgba(13, 202, 240, 0.1); color: #0dcaf0; }
         .stat-icon.completed { background: rgba(25, 135, 84, 0.1); color: #198754; }
-        
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
-        
-        .page-title {
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin-bottom: 30px;
-            color: #1a1a2e;
-        }
-        
+        .stat-number { font-size: 2rem; font-weight: 700; margin-bottom: 5px; }
+        .stat-label { color: #6c757d; font-size: 0.9rem; }
         .recent-orders {
             background: white;
             border-radius: 15px;
             padding: 30px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.05);
         }
-        
-        .table {
-            margin-bottom: 0;
-        }
-        
+        .table { margin-bottom: 0; }
         .table thead th {
             border-bottom: 2px solid #f1f1f1;
             color: #6c757d;
@@ -177,14 +121,12 @@
             font-size: 0.85rem;
             text-transform: uppercase;
         }
-        
         .status-badge {
             padding: 5px 12px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 500;
         }
-        
         .status-quoting { background: #e2e3e5; color: #41464b; }
         .status-confirmed { background: #cfe2ff; color: #084298; }
         .status-pending { background: #fff3cd; color: #856404; }
@@ -192,33 +134,12 @@
         .status-completed { background: #d1e7dd; color: #0f5132; }
         .status-cancelled { background: #f8d7da; color: #842029; }
         .status-paused { background: #e2e3e5; color: #41464b; }
-        
-        .role-badge {
-            padding: 3px 10px;
-            border-radius: 5px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        
-        .role-admin { background: #e7e1ff; color: #5a3dbf; }
-        .role-sales { background: #d1e7dd; color: #0f5132; }
-        .role-worker { background: #cfe2ff; color: #0a4a8a; }
-        
         @media (max-width: 991px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar.active {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-            }
-            .mobile-toggle {
-                display: block !important;
-            }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .mobile-toggle { display: block !important; }
         }
-        
         .mobile-toggle {
             display: none;
             background: none;
@@ -229,21 +150,18 @@
     </style>
 </head>
 <body>
-    <!-- 侧边栏 -->
     <nav class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <h3>🏭 排单系统</h3>
             <small>v1.0</small>
         </div>
         <ul class="sidebar-menu">
-            <!-- 控制台 -->
             <li>
                 <a href="{{ url_for('order.dashboard') }}" class="active">
                     <i class="bi bi-grid-1x2"></i>
                     <span>控制台</span>
                 </a>
             </li>
-            <!-- 创建订单 -->
             {% if current_user.role in ['admin', 'sales'] %}
             <li>
                 <a href="{{ url_for('order.create_order') }}">
@@ -252,15 +170,19 @@
                 </a>
             </li>
             {% endif %}
-            <!-- 订单列表 -->
             <li>
                 <a href="{{ url_for('order.order_list') }}">
                     <i class="bi bi-list-check"></i>
                     <span>订单列表</span>
                 </a>
             </li>
-            <!-- 管理员菜单 -->
             {% if current_user.role == 'admin' %}
+            <li>
+                <a href="{{ url_for('admin.index') }}">
+                    <i class="bi bi-gear"></i>
+                    <span>系统管理</span>
+                </a>
+            </li>
             <li>
                 <a href="{{ url_for('admin.user_list') }}">
                     <i class="bi bi-people"></i>
@@ -274,14 +196,12 @@
                 </a>
             </li>
             {% endif %}
-            <!-- 修改密码 -->
             <li>
                 <a href="{{ url_for('auth.change_password') }}">
                     <i class="bi bi-key"></i>
                     <span>修改密码</span>
                 </a>
             </li>
-            <!-- 退出登录 -->
             <li>
                 <a href="{{ url_for('auth.logout') }}">
                     <i class="bi bi-box-arrow-right"></i>
@@ -291,7 +211,6 @@
         </ul>
     </nav>
 
-    <!-- 主内容 -->
     <main class="main-content">
         <div class="topbar">
             <div class="d-flex align-items-center">
@@ -326,7 +245,6 @@
             {% endwith %}
 
             {% block main_content %}
-            <!-- 统计卡片 -->
             {% if stats is defined %}
             <div class="row mb-4">
                 <div class="col-md-6 col-lg-3 mb-3">
@@ -347,7 +265,7 @@
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
                                 <div class="stat-number">{{ stats.pending }}</div>
-                                <div class="stat-label">待处理</div>
+                                <div class="stat-label">待生产</div>
                             </div>
                             <div class="stat-icon pending">
                                 <i class="bi bi-hourglass-split"></i>
@@ -385,7 +303,6 @@
             {% endif %}
 
             <div class="row">
-                <!-- 最近订单 -->
                 <div class="col-12 mb-4">
                     <div class="recent-orders">
                         <div class="d-flex justify-content-between align-items-center mb-4">
