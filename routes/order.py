@@ -1,477 +1,419 @@
-# -*- coding: utf-8 -*-
-"""
-订单路由模块
-包含订单创建、列表、详情等功能
-"""
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+import os
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_from_directory, current_app
 from flask_login import login_required, current_user
-from models import db, Order, Product, User, Payment
+from werkzeug.utils import secure_filename
+from models import db, Order, Product, Attachment
+from datetime import datetime
 from decimal import Decimal
-from datetime import datetime, date
-import json
 
 order_bp = Blueprint('order', __name__)
 
+def allowed_file(filename):
+    allowed_extensions = current_app.config.get('ALLOWED_EXTENSIONS', {'dwg', 'dxf', 'pdf'})
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
-def generate_order_number():
-    """生成订单号：日期+序号"""
-    today = date.today()
-    today_str = today.strftime('%Y%m%d')
+@order_bp.route('/')
+@order_bp.route('/dashboard')
+@login_required
+def dashboard():
+    # 获取统计数据
+    if current_user.role == 'admin':
+        total_orders = Order.query.count()
+        pending_orders = Order.query.filter(Order.status.in_(['quoting', 'confirmed', 'pending'])).count()
+        producing_orders = Order.query.filter_by(status='producing').count()
+        completed_orders = Order.query.filter_by(status='completed').count()
+        recent_orders = Order.query.order_by(Order.created_at.desc()).limit(10).all()
+    elif current_user.role == 'sales':
+        total_orders = Order.query.filter_by(created_by=current_user.id).count()
+        pending_orders = Order.query.filter_by(created_by=current_user.id).filter(Order.status.in_(['quoting', 'confirmed', 'pending'])).count()
+        producing_orders = Order.query.filter_by(created_by=current_user.id, status='producing').count()
+        completed_orders = Order.query.filter_by(created_by=current_user.id, status='completed').count()
+        recent_orders = Order.query.filter_by(created_by=current_user.id).order_by(Order.created_at.desc()).limit(10).all()
+    else:  # worker
+        from sqlalchemy import or_
+        total_orders = Order.query.filter(
+            (Order.assigned_to == current_user.id) | (Order.assigned_to == None)
+        ).count()
+        pending_orders = Order.query.filter(
+            (Order.assigned_to == current_user.id) | (Order.assigned_to == None),
+            Order.status.in_(['pending', 'confirmed'])
+        ).count()
+        producing_orders = Order.query.filter(
+            (Order.assigned_to == current_user.id) | (Order.assigned_to == None),
+            Order.status == 'producing'
+        ).count()
+        completed_orders = Order.query.filter_by(assigned_to=current_user.id, status='completed').count()
+        recent_orders = Order.query.filter(
+            (Order.assigned_to == current_user.id) | (Order.assigned_to == None)
+        ).order_by(Order.created_at.desc()).limit(10).all()
     
-    # 查找今天最新的订单号
-    latest_order = Order.query.filter(
-        Order.order_number.like(f'ORD{today_str}%')
-    ).order_by(Order.order_number.desc()).first()
+    stats = {
+        'total': total_orders,
+        'pending': pending_orders,
+        'producing': producing_orders,
+        'completed': completed_orders
+    }
     
-    if latest_order:
-        # 提取序号并+1
-        try:
-            seq = int(latest_order.order_number[-4:]) + 1
-        except:
-            seq = 1
+    return render_template('dashboard.html', stats=stats, recent_orders=recent_orders)
+
+@order_bp.route('/orders')
+@login_required
+def order_list():
+    status_filter = request.args.get('status', '')
+    
+    if current_user.role == 'admin':
+        query = Order.query
+    elif current_user.role == 'sales':
+        query = Order.query.filter_by(created_by=current_user.id)
     else:
-        seq = 1
+        query = Order.query.filter(
+            (Order.assigned_to == current_user.id) | (Order.assigned_to == None)
+        )
     
-    return f'ORD{today_str}{seq:04d}'
-
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    
+    orders = query.order_by(Order.created_at.desc()).all()
+    
+    return render_template('order_list.html', orders=orders, status_filter=status_filter)
 
 @order_bp.route('/create_order', methods=['GET', 'POST'])
 @login_required
 def create_order():
-    """创建订单页面"""
-    # 权限控制：仅跟单员和管理员可见
-    if current_user.role not in ['admin', 'admin_assistant', 'clerks']:
-        flash('您没有权限创建订单', 'danger')
-        return redirect(url_for('main.dashboard'))
+    if current_user.role not in ['admin', 'sales']:
+        flash('您没有权限执行此操作', 'danger')
+        return redirect(url_for('order.dashboard'))
+    
+    # 获取统计数据（用于侧边栏）
+    if current_user.role == 'admin':
+        total_orders = Order.query.count()
+        pending_orders = Order.query.filter(Order.status.in_(['quoting', 'confirmed', 'pending'])).count()
+        producing_orders = Order.query.filter_by(status='producing').count()
+        completed_orders = Order.query.filter_by(status='completed').count()
+    elif current_user.role == 'sales':
+        total_orders = Order.query.filter_by(created_by=current_user.id).count()
+        pending_orders = Order.query.filter_by(created_by=current_user.id).filter(Order.status.in_(['quoting', 'confirmed', 'pending'])).count()
+        producing_orders = Order.query.filter_by(created_by=current_user.id, status='producing').count()
+        completed_orders = Order.query.filter_by(created_by=current_user.id, status='completed').count()
+    else:
+        total_orders = 0
+        pending_orders = 0
+        producing_orders = 0
+        completed_orders = 0
+    
+    stats = {
+        'total': total_orders,
+        'pending': pending_orders,
+        'producing': producing_orders,
+        'completed': completed_orders
+    }
     
     if request.method == 'POST':
-        try:
-            # 获取表单数据
-            customer_name = request.form.get('customer_name', '').strip()
-            contact_person = request.form.get('contact_person', '').strip()
-            contact_phone = request.form.get('contact_phone', '').strip()
-            required_date_str = request.form.get('required_date', '')
-            production_note = request.form.get('production_note', '').strip()
+        customer_name = request.form.get('customer_name', '').strip()
+        contact_person = request.form.get('contact_person', '').strip()  # 新增
+        contact_phone = request.form.get('contact_phone', '').strip()    # 新增
+        remark = request.form.get('remark', '').strip()
+        assigned_to = request.form.get('assigned_to', '')
+        
+        # 获取所有产品数据
+        product_names = request.form.getlist('product_name[]')
+        lengths = request.form.getlist('length[]')
+        widths = request.form.getlist('width[]')
+        thicknesses = request.form.getlist('thickness[]')
+        colors = request.form.getlist('color[]')
+        quantities = request.form.getlist('quantity[]')
+        unit_prices = request.form.getlist('unit_price[]')  # 新增
+        units = request.form.getlist('unit[]')              # 新增
+        screenshots = request.form.getlist('screenshot[]')
+        
+        # 验证必填字段
+        if not customer_name:
+            flash('请填写客户名称', 'danger')
+            from models import User
+            workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+            return render_template('create_order.html', workers=workers, stats=stats)
+        
+        if not product_names or len(product_names) == 0:
+            flash('请至少添加一个产品', 'danger')
+            from models import User
+            workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+            return render_template('create_order.html', workers=workers, stats=stats)
+        
+        # 验证每个产品
+        products_data = []
+        total_amount = Decimal('0.00')
+        
+        for i in range(len(product_names)):
+            if not product_names[i].strip():
+                flash(f'第{i+1}个产品名称不能为空', 'danger')
+                from models import User
+                workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+                return render_template('create_order.html', workers=workers, stats=stats)
             
-            # 验证必填字段
-            if not customer_name:
-                flash('客户名称不能为空', 'danger')
-                return redirect(url_for('order.create_order'))
+            try:
+                length = float(lengths[i])
+                width = float(widths[i])
+                quantity = int(quantities[i])
+            except (ValueError, IndexError):
+                flash(f'第{i+1}个产品的尺寸或数量格式不正确', 'danger')
+                from models import User
+                workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+                return render_template('create_order.html', workers=workers, stats=stats)
             
-            # 创建订单
-            order = Order(
-                order_number=generate_order_number(),
-                customer_name=customer_name,
-                contact_person=contact_person,
-                contact_phone=contact_phone,
-                status='quoting',  # 默认报价状态
-                production_note=production_note,
-                created_by=current_user.id
-            )
+            if quantity <= 0:
+                flash(f'第{i+1}个产品的数量必须大于0', 'danger')
+                from models import User
+                workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
+                return render_template('create_order.html', workers=workers, stats=stats)
             
-            # 处理要求完成日期
-            if required_date_str:
-                try:
-                    order.required_date = datetime.strptime(required_date_str, '%Y-%m-%d').date()
-                except ValueError:
-                    pass
+            # 厚度（可选）
+            thickness = None
+            try:
+                if i < len(thicknesses) and thicknesses[i]:
+                    thickness = float(thicknesses[i])
+            except ValueError:
+                pass
             
-            db.session.add(order)
-            db.session.flush()  # 获取order.id
+            # 颜色（可选）
+            color = colors[i].strip() if i < len(colors) else None
             
-            # 处理产品明细
-            products_data = []
-            index = 0
-            while True:
-                product_name = request.form.get(f'product_name_{index}', '').strip()
-                if not product_name:
-                    # 检查是否还有其他产品
-                    has_more = False
-                    for i in range(index + 1, index + 10):
-                        if request.form.get(f'product_name_{i}', '').strip():
-                            has_more = True
-                            break
-                    if not has_more:
-                        break
-                    index += 1
-                    continue
-                
-                # 获取产品字段
-                quantity = request.form.get(f'quantity_{index}', '1')
-                unit_price = request.form.get(f'unit_price_{index}', '0')
-                unit = request.form.get(f'unit_{index}', '件')
-                color = request.form.get(f'color_{index}', '')
-                size = request.form.get(f'size_{index}', '')
-                weight = request.form.get(f'weight_{index}', '')
-                material = request.form.get(f'material_{index}', '')
-                craft = request.form.get(f'craft_{index}', '')
-                other_req = request.form.get(f'other_requirements_{index}', '')
-                remark = request.form.get(f'remark_{index}', '')
-                
-                # 转换为数值
-                try:
-                    quantity = int(quantity) if quantity else 1
-                except ValueError:
-                    quantity = 1
-                
-                try:
-                    unit_price = Decimal(str(unit_price)) if unit_price else Decimal('0.00')
-                except ValueError:
-                    unit_price = Decimal('0.00')
-                
-                # 计算金额
-                amount = Decimal(str(quantity)) * unit_price
-                
-                # 创建产品
-                product = Product(
-                    order_id=order.id,
-                    product_name=product_name,
-                    quantity=quantity,
-                    unit_price=unit_price,
-                    unit=unit,
-                    amount=amount,
-                    color=color,
-                    size=size,
-                    weight=weight,
-                    material=material,
-                    craft=craft,
-                    other_requirements=other_req,
-                    remark=remark
-                )
-                db.session.add(product)
-                
-                products_data.append({
-                    'product_name': product_name,
-                    'quantity': quantity,
-                    'unit_price': float(unit_price),
-                    'amount': float(amount)
-                })
-                
-                index += 1
+            # 单价和金额（新增）
+            unit_price = Decimal('0.00')
+            try:
+                if i < len(unit_prices) and unit_prices[i]:
+                    unit_price = Decimal(str(unit_prices[i]))
+            except:
+                pass
             
-            # 计算订单总金额
-            order.total_amount = sum(item['amount'] for item in products_data)
-            order.payment_status = 'unpaid'
-            order.paid_amount = Decimal('0.00')
+            amount = Decimal(str(quantity)) * unit_price
+            total_amount += amount
             
-            db.session.commit()
+            # 单位
+            unit = units[i] if i < len(units) and units[i] else '件'
             
-            flash(f'订单创建成功！订单号：{order.order_number}', 'success')
-            return redirect(url_for('order.order_list'))
+            # 截图（可选）
+            screenshot = screenshots[i] if i < len(screenshots) else None
             
-        except Exception as e:
-            db.session.rollback()
-            flash(f'创建订单失败：{str(e)}', 'danger')
-            return redirect(url_for('order.create_order'))
-    
-    # GET请求：渲染创建订单页面
-    return render_template('create_order.html')
-
-
-@order_bp.route('/order_list')
-@login_required
-def order_list():
-    """订单列表"""
-    # 获取筛选参数
-    status_filter = request.args.get('status', '')
-    search_keyword = request.args.get('keyword', '')
-    
-    # 构建查询
-    query = Order.query
-    
-    if status_filter:
-        query = query.filter(Order.status == status_filter)
-    
-    if search_keyword:
-        query = query.filter(
-            db.or_(
-                Order.order_number.like(f'%{search_keyword}%'),
-                Order.customer_name.like(f'%{search_keyword}%')
-            )
+            products_data.append({
+                'product_name': product_names[i].strip(),
+                'length': length,
+                'width': width,
+                'thickness': thickness,
+                'color': color,
+                'quantity': quantity,
+                'unit_price': unit_price,
+                'amount': amount,
+                'unit': unit,
+                'screenshot': screenshot if screenshot else None
+            })
+        
+        # 生成订单号：ORD-YYYYMMDD-XXX
+        today = datetime.now().strftime('%Y%m%d')
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_orders_count = Order.query.filter(Order.created_at >= today_start).count()
+        order_no = f"ORD-{today}-{str(today_orders_count + 1).zfill(3)}"
+        
+        # 创建订单
+        order = Order(
+            order_no=order_no,
+            customer_name=customer_name,
+            contact_person=contact_person,      # 新增
+            contact_phone=contact_phone,        # 新增
+            total_amount=total_amount,          # 新增
+            remark=remark if remark else None,
+            status='quoting',  # 默认报价状态
+            created_by=current_user.id,
+            assigned_to=int(assigned_to) if assigned_to else None
         )
+        
+        db.session.add(order)
+        db.session.flush()
+        
+        # 创建产品并处理附件
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        for i, product_data in enumerate(products_data):
+            product = Product(
+                order_id=order.id,
+                product_name=product_data['product_name'],
+                length=product_data['length'],
+                width=product_data['width'],
+                thickness=product_data['thickness'],
+                color=product_data['color'],
+                quantity=product_data['quantity'],
+                unit_price=product_data['unit_price'],    # 新增
+                amount=product_data['amount'],            # 新增
+                unit=product_data['unit'],                # 新增
+                screenshot=product_data['screenshot']
+            )
+            db.session.add(product)
+            db.session.flush()
+            
+            # 处理附件
+            attachment_key = f'attachments_{i}'
+            if attachment_key in request.files:
+                files = request.files.getlist(attachment_key)
+                for file in files:
+                    if file and file.filename and allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                        new_filename = f"{order.id}_{product.id}_{timestamp}_{filename}"
+                        filepath = os.path.join(upload_folder, new_filename)
+                        
+                        file.save(filepath)
+                        
+                        attachment = Attachment(
+                            product_id=product.id,
+                            filename=filename,
+                            filepath=new_filename
+                        )
+                        db.session.add(attachment)
+        
+        db.session.commit()
+        flash(f'订单创建成功！订单号：{order.order_no}', 'success')
+        return redirect(url_for('order.order_detail', order_id=order.id))
     
-    # 排序：最新在前
-    orders = query.order_by(Order.created_at.desc()).all()
+    # GET请求
+    from models import User
+    workers = User.query.filter_by(role='worker', is_active=True).all() if current_user.role == 'admin' else []
     
-    # 获取所有状态选项
-    status_choices = [
-        ('quoting', '报价中'),
-        ('confirmed', '已确认'),
-        ('pending', '待生产'),
-        ('producing', '进行中'),
-        ('completed', '已完成'),
-        ('cancelled', '已取消'),
-        ('paused', '已暂停')
-    ]
-    
-    return render_template('order_list.html', 
-                         orders=orders,
-                         status_choices=status_choices,
-                         current_status=status_filter,
-                         search_keyword=search_keyword)
+    return render_template('create_order.html', workers=workers, stats=stats)
 
-
-@order_bp.route('/quoting_list')
-@login_required
-def quoting_list():
-    """报价管理列表（仅显示状态=quoting的订单）"""
-    if current_user.role not in ['admin', 'admin_assistant', 'clerks']:
-        flash('您没有权限访问此页面', 'danger')
-        return redirect(url_for('main.dashboard'))
-    
-    orders = Order.query.filter_by(status='quoting').order_by(Order.created_at.desc()).all()
-    return render_template('quoting_list.html', orders=orders)
-
-
-@order_bp.route('/order_detail/<int:order_id>')
+@order_bp.route('/order/<int:order_id>')
 @login_required
 def order_detail(order_id):
-    """订单详情"""
     order = Order.query.get_or_404(order_id)
-    products = order.products.all()
     
-    # 计算订单统计
-    total_quantity = sum(p.quantity for p in products)
-    total_amount = sum(float(p.amount or 0) for p in products)
+    if current_user.role == 'worker' and order.assigned_to not in [current_user.id, None]:
+        flash('您没有权限查看此订单', 'danger')
+        return redirect(url_for('order.order_list'))
     
-    return render_template('order_detail.html',
-                         order=order,
-                         products=products,
-                         total_quantity=total_quantity,
-                         total_amount=total_amount)
+    return render_template('order_detail.html', order=order)
 
-
-@order_bp.route('/order_update_status/<int:order_id>', methods=['POST'])
+@order_bp.route('/order/<int:order_id>/update_status', methods=['POST'])
 @login_required
 def update_order_status(order_id):
-    """更新订单状态"""
     order = Order.query.get_or_404(order_id)
     new_status = request.form.get('status', '')
     
-    valid_statuses = ['quoting', 'confirmed', 'pending', 'producing', 'completed', 'cancelled', 'paused']
+    if current_user.role == 'worker':
+        if order.assigned_to != current_user.id:
+            return jsonify({'success': False, 'message': '您没有权限操作此订单'})
+        if new_status not in ['producing', 'completed', 'paused']:
+            return jsonify({'success': False, 'message': '无效的状态操作'})
     
-    if new_status not in valid_statuses:
-        return jsonify({'success': False, 'message': '无效的状态'})
+    if current_user.role == 'sales':
+        if order.created_by != current_user.id:
+            return jsonify({'success': False, 'message': '您没有权限操作此订单'})
+        # 跟单员可以确认报价、取消、暂停
+        if new_status not in ['confirmed', 'cancelled', 'paused', 'pending']:
+            return jsonify({'success': False, 'message': '跟单员只能确认报价、取消或暂停订单'})
+    
+    # 状态流转验证
+    valid_transitions = {
+        'quoting': ['confirmed', 'cancelled'],          # 报价中可确认或取消
+        'confirmed': ['pending', 'cancelled'],          # 已确认可转待生产或取消
+        'pending': ['producing', 'cancelled', 'paused'],
+        'producing': ['completed', 'paused'],
+        'paused': ['producing', 'cancelled'],
+        'completed': [],
+        'cancelled': []
+    }
+    
+    if new_status not in valid_transitions.get(order.status, []):
+        return jsonify({'success': False, 'message': f'无法从 {order.get_status_text()} 转换为目标状态'})
     
     order.status = new_status
+    order.updated_at = datetime.utcnow()
     db.session.commit()
     
-    return jsonify({
-        'success': True,
-        'message': f'状态已更新为：{order.get_status_display()}'
-    })
+    return jsonify({'success': True, 'message': f'订单状态已更新为 {order.get_status_text()}'})
 
-
-@order_bp.route('/order_assign/<int:order_id>', methods=['POST'])
+@order_bp.route('/order/<int:order_id>/claim', methods=['POST'])
 @login_required
-def assign_order(order_id):
-    """分配订单给生产人员"""
-    if current_user.role not in ['admin', 'admin_assistant', 'clerks']:
-        return jsonify({'success': False, 'message': '没有权限'})
-    
+def claim_order(order_id):
+    """生产人员认领订单"""
     order = Order.query.get_or_404(order_id)
-    user_id = request.form.get('user_id')
     
-    if user_id:
-        order.assigned_to = int(user_id)
-    else:
-        order.assigned_to = None
+    if current_user.role != 'worker':
+        return jsonify({'success': False, 'message': '只有生产人员可以认领订单'})
     
+    if order.assigned_to is not None:
+        return jsonify({'success': False, 'message': '此订单已被分配'})
+    
+    order.assigned_to = current_user.id
+    order.updated_at = datetime.utcnow()
     db.session.commit()
     
-    return jsonify({'success': True, 'message': '订单已分配'})
+    return jsonify({'success': True, 'message': f'您已成功认领订单 #{order.id}'})
 
-
-@order_bp.route('/my_tasks')
+@order_bp.route('/download/<int:attachment_id>')
 @login_required
-def my_tasks():
-    """我的生产任务（生产人员）"""
-    if current_user.role != 'production':
-        flash('此页面仅生产人员可用', 'warning')
-        return redirect(url_for('main.dashboard'))
+def download_attachment(attachment_id):
+    attachment = Attachment.query.get_or_404(attachment_id)
+    product = attachment.product
+    order = product.order
     
-    orders = Order.query.filter(
-        Order.assigned_to == current_user.id,
-        Order.status.in_(['pending', 'producing', 'paused'])
-    ).order_by(Order.required_date.asc()).all()
+    if current_user.role == 'worker' and order.assigned_to != current_user.id:
+        flash('您没有权限下载此文件', 'danger')
+        return redirect(url_for('order.order_list'))
     
-    return render_template('my_tasks.html', orders=orders)
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    return send_from_directory(upload_folder, attachment.filepath, as_attachment=True, download_name=attachment.filename)
 
-
-# ===== 付款相关路由 =====
-
-@order_bp.route('/payment_records')
+@order_bp.route('/order/<int:order_id>/delete', methods=['POST'])
 @login_required
-def payment_records():
-    """付款记录列表（管理员可见）"""
+def delete_order(order_id):
     if current_user.role != 'admin':
-        flash('此页面仅管理员可见', 'danger')
-        return redirect(url_for('main.dashboard'))
-    
-    # 获取筛选参数
-    order_number = request.args.get('order_number', '').strip()
-    
-    query = Payment.query
-    
-    if order_number:
-        query = query.join(Order).filter(Order.order_number.like(f'%{order_number}%'))
-    
-    payments = query.order_by(Payment.payment_date.desc()).all()
-    
-    return render_template('payment_records.html', payments=payments)
-
-
-@order_bp.route('/add_payment/<int:order_id>', methods=['GET', 'POST'])
-@login_required
-def add_payment(order_id):
-    """添加付款记录"""
-    if current_user.role != 'admin':
-        flash('此页面仅管理员可见', 'danger')
-        return redirect(url_for('main.dashboard'))
+        return jsonify({'success': False, 'message': '只有管理员可以删除订单'})
     
     order = Order.query.get_or_404(order_id)
     
-    if request.method == 'POST':
-        try:
-            amount_str = request.form.get('amount', '0')
-            payment_date_str = request.form.get('payment_date', '')
-            payment_method = request.form.get('payment_method', '')
-            remark = request.form.get('remark', '').strip()
-            
-            # 验证
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    for product in order.products:
+        for attachment in product.attachments:
             try:
-                amount = Decimal(str(amount_str))
-                if amount <= 0:
-                    flash('付款金额必须大于0', 'danger')
-                    return redirect(url_for('order.add_payment', order_id=order_id))
-            except ValueError:
-                flash('无效的付款金额', 'danger')
-                return redirect(url_for('order.add_payment', order_id=order_id))
-            
-            # 检查是否超过未付金额
-            unpaid_amount = order.total_amount - order.paid_amount
-            if amount > unpaid_amount:
-                flash(f'付款金额不能超过未付金额 ({unpaid_amount})', 'warning')
-                return redirect(url_for('order.add_payment', order_id=order_id))
-            
-            # 解析日期
-            try:
-                payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d')
-            except ValueError:
-                payment_date = datetime.now()
-            
-            # 创建付款记录
-            payment = Payment(
-                order_id=order_id,
-                amount=amount,
-                payment_date=payment_date,
-                payment_method=payment_method,
-                remark=remark,
-                created_by=current_user.id
-            )
-            
-            # 更新订单已付金额和付款状态
-            order.paid_amount += amount
-            order.update_payment_status()
-            
-            db.session.add(payment)
-            db.session.commit()
-            
-            flash(f'付款记录已添加！金额：{amount}', 'success')
-            return redirect(url_for('order.order_detail', order_id=order_id))
-            
-        except Exception as e:
-            db.session.rollback()
-            flash(f'添加付款记录失败：{str(e)}', 'danger')
+                filepath = os.path.join(upload_folder, attachment.filepath)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            except Exception:
+                pass
     
-    return render_template('add_payment.html', order=order)
+    db.session.delete(order)
+    db.session.commit()
+    flash('订单已删除', 'success')
+    
+    return jsonify({'success': True, 'message': '订单已删除'})
 
-
-@order_bp.route('/all_orders')
+@order_bp.route('/order/<int:order_id>/qrcode')
 @login_required
-def all_orders():
-    """全部订单（管理员）"""
-    if current_user.role != 'admin':
-        flash('此页面仅管理员可见', 'danger')
-        return redirect(url_for('main.dashboard'))
+def order_qrcode(order_id):
+    """生成订单二维码"""
+    import qrcode
+    from io import BytesIO
+    import base64
     
-    # 获取筛选参数
-    status_filter = request.args.get('status', '')
-    search_keyword = request.args.get('keyword', '')
-    
-    query = Order.query
-    
-    if status_filter:
-        query = query.filter(Order.status == status_filter)
-    
-    if search_keyword:
-        query = query.filter(
-            db.or_(
-                Order.order_number.like(f'%{search_keyword}%'),
-                Order.customer_name.like(f'%{search_keyword}%')
-            )
-        )
-    
-    orders = query.order_by(Order.created_at.desc()).all()
-    
-    status_choices = [
-        ('quoting', '报价中'),
-        ('confirmed', '已确认'),
-        ('pending', '待生产'),
-        ('producing', '进行中'),
-        ('completed', '已完成'),
-        ('cancelled', '已取消'),
-        ('paused', '已暂停')
-    ]
-    
-    return render_template('all_orders.html',
-                         orders=orders,
-                         status_choices=status_choices,
-                         current_status=status_filter,
-                         search_keyword=search_keyword)
-
-
-# ===== API接口 =====
-
-@order_bp.route('/api/calculate_amount', methods=['POST'])
-@login_required
-def api_calculate_amount():
-    """计算金额API"""
-    data = request.get_json()
-    quantity = int(data.get('quantity', 0))
-    unit_price = float(data.get('unit_price', 0))
-    
-    amount = quantity * unit_price
-    
-    return jsonify({
-        'success': True,
-        'amount': round(amount, 2)
-    })
-
-
-@order_bp.route('/api/get_order_products/<int:order_id>')
-@login_required
-def api_get_order_products(order_id):
-    """获取订单产品列表API"""
     order = Order.query.get_or_404(order_id)
-    products = order.products.all()
+    preview_url = url_for('order.order_preview', order_no=order.order_no, _external=True)
     
-    products_data = []
-    for p in products:
-        products_data.append({
-            'id': p.id,
-            'product_name': p.product_name,
-            'quantity': p.quantity,
-            'unit_price': float(p.unit_price or 0),
-            'amount': float(p.amount or 0),
-            'unit': p.unit,
-            'color': p.color,
-            'size': p.size
-        })
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
+    qr.add_data(preview_url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    img_str = base64.b64encode(buffer.getvalue()).decode()
     
     return jsonify({
         'success': True,
-        'products': products_data,
-        'total_amount': float(order.total_amount or 0)
+        'qrcode': f'data:image/png;base64,{img_str}',
+        'preview_url': preview_url
     })
+
+@order_bp.route('/preview/<order_no>')
+def order_preview(order_no):
+    """订单预览页面（无需登录）"""
+    order = Order.query.filter_by(order_no=order_no).first_or_404()
+    return render_template('order_preview.html', order=order)
