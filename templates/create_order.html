@@ -1,216 +1,425 @@
-{% extends "dashboard.html" %}
-
-{% block title %}创建订单 - 工厂排单系统{% endblock %}
-
-{% block main_content %}
-<div class="content-wrapper" style="padding: 0;">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('order.dashboard') }}">控制台</a></li>
-            <li class="breadcrumb-item active">创建订单</li>
-        </ol>
-    </nav>
-
-    <div class="row justify-content-center">
-        <div class="col-lg-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>创建新订单</h5>
-                </div>
-                <div class="card-body p-4">
-                    <form method="POST" enctype="multipart/form-data" id="orderForm">
-                        <div class="row g-3 mb-4">
-                            <div class="col-12">
-                                <h6 class="text-muted mb-3"><i class="bi bi-info-circle me-2"></i>基本信息</h6>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="customer_name" class="form-label">客户名称 <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="customer_name" name="customer_name" placeholder="请输入客户名称" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">订单号</label>
-                                <input type="text" class="form-control" value="系统自动生成" disabled style="background: #f8f9fa;">
-                                <small class="text-muted">提交后自动生成，格式：ORD-YYYYMMDD-XXX</small>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="text-muted mb-0"><i class="bi bi-box me-2"></i>产品信息</h6>
-                                <button type="button" class="btn btn-primary btn-sm" onclick="addProductRow()">
-                                    <i class="bi bi-plus-circle me-1"></i>添加产品
-                                </button>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-bordered" id="productsTable">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th style="width: 35px;">#</th>
-                                            <th style="width: 140px;">产品名称 <span class="text-danger">*</span></th>
-                                            <th style="width: 75px;">厚度</th>
-                                            <th style="width: 80px;">颜色</th>
-                                            <th style="width: 85px;">长度 <span class="text-danger">*</span></th>
-                                            <th style="width: 85px;">宽度 <span class="text-danger">*</span></th>
-                                            <th style="width: 65px;">数量 <span class="text-danger">*</span></th>
-                                            <th style="width: 120px;">图纸/截图</th>
-                                            <th style="width: 40px;">操作</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="productsBody"></tbody>
-                                </table>
-                            </div>
-                            <div class="d-flex gap-3">
-                                <small class="text-muted">图纸: .dwg/.dxf/.pdf</small>
-                                <small class="text-primary"><i class="bi bi-lightbulb me-1"></i>截图 Ctrl+V 粘贴</small>
-                            </div>
-                        </div>
-                        
-                        {% if current_user.role == 'admin' and workers %}
-                        <div class="row g-3 mb-4">
-                            <div class="col-12"><h6 class="text-muted mb-3"><i class="bi bi-person-check me-2"></i>订单分配</h6></div>
-                            <div class="col-md-6">
-                                <label for="assigned_to" class="form-label">分配给生产人员</label>
-                                <select class="form-select" id="assigned_to" name="assigned_to">
-                                    <option value="">-- 暂不分配 --</option>
-                                    {% for worker in workers %}
-                                    <option value="{{ worker.id }}">{{ worker.name }} ({{ worker.username }})</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        {% endif %}
-                        
-                        <div class="row g-3 mb-4">
-                            <div class="col-12"><h6 class="text-muted mb-3"><i class="bi bi-chat-left-text me-2"></i>其他信息</h6></div>
-                            <div class="col-12">
-                                <label for="remark" class="form-label">备注说明</label>
-                                <textarea class="form-control" id="remark" name="remark" rows="3" placeholder="如有特殊要求请在此说明"></textarea>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex gap-3 pt-4 border-top">
-                            <button type="submit" class="btn btn-primary px-5"><i class="bi bi-check-circle me-2"></i>提交订单</button>
-                            <a href="{{ url_for('order.order_list') }}" class="btn btn-outline-secondary px-5">取消</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-<script>
-let productIndex = 0;
-
-document.addEventListener('DOMContentLoaded', function() {
-    addProductRow();
-    document.addEventListener('paste', function(e) {
-        const items = e.clipboardData.items;
-        for (let item of items) {
-            if (item.type.indexOf('image') !== -1) {
-                e.preventDefault();
-                const activeScreenshot = document.querySelector('.screenshot-area:focus');
-                if (activeScreenshot) {
-                    const blob = item.getAsFile();
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const imgData = e.target.result;
-                        const preview = activeScreenshot.querySelector('.screenshot-preview');
-                        const input = activeScreenshot.querySelector('input[name="screenshot[]"]');
-                        preview.innerHTML = `<img src="${imgData}" onclick="showScreenshotModal('${imgData}')" style="width: 29px; height: 29px; object-fit: cover; border-radius: 2px; cursor: pointer;" title="点击查看大图">
-                            <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 p-0" style="width: 12px; height: 12px; font-size: 7px;" onclick="event.stopPropagation(); clearScreenshot(this)"><i class="bi bi-x"></i></button>`;
-                        preview.classList.add('has-image');
-                        input.value = imgData;
-                    };
-                    reader.readAsDataURL(blob);
-                }
-                break;
-            }
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>创建订单 - 工厂排单系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f6fa;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
         }
-    });
-});
-
-function addProductRow() {
-    productIndex++;
-    const tbody = document.getElementById('productsBody');
-    const tr = document.createElement('tr');
-    tr.id = `product-row-${productIndex}`;
-    tr.innerHTML = `
-        <td class="text-center align-middle">${productIndex}</td>
-        <td><input type="text" class="form-control form-control-sm" name="product_name[]" placeholder="名称" required></td>
-        <td><input type="number" class="form-control form-control-sm" name="thickness[]" placeholder="厚度" step="0.1" min="0"></td>
-        <td><input type="text" class="form-control form-control-sm" name="color[]" placeholder="颜色" list="colorList"></td>
-        <td><input type="number" class="form-control form-control-sm" name="length[]" placeholder="长度" step="0.01" min="0" required></td>
-        <td><input type="number" class="form-control form-control-sm" name="width[]" placeholder="宽度" step="0.01" min="0" required></td>
-        <td><input type="number" class="form-control form-control-sm" name="quantity[]" placeholder="数量" min="1" required></td>
-        <td style="min-width: 120px;">
-            <input type="hidden" name="screenshot[]">
-            <div class="d-flex align-items-center gap-1">
-                <div class="screenshot-area position-relative border rounded d-flex align-items-center justify-content-center" tabindex="0" 
-                     style="width: 31px; height: 31px; background: #f8f9fa; cursor: pointer; flex-shrink: 0;"
-                     onclick="this.focus()" title="点击后 Ctrl+V 粘贴截图">
-                    <div class="screenshot-preview text-center text-muted d-flex align-items-center justify-content-center w-100 h-100">
-                        <i class="bi bi-image" style="font-size: 12px;"></i>
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px 10px 0 0;
+            padding: 15px 20px;
+        }
+        .product-row {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #e9ecef;
+        }
+        .product-row:hover {
+            border-color: #667eea;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+        }
+        .amount-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        .total-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .required-field::after {
+            content: " *";
+            color: red;
+        }
+        .input-group-text {
+            background-color: #e9ecef;
+        }
+        /* 金额输入框样式 */
+        .amount-input {
+            background-color: #fff3cd;
+            font-weight: bold;
+        }
+        /* 产品序号样式 */
+        .product-index {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    {% include 'dashboard.html' %}
+    
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="row justify-content-center">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>创建订单</h4>
+                            <span class="badge bg-light text-dark">订单号将自动生成</span>
+                        </div>
+                        <div class="card-body">
+                            <form id="orderForm" method="POST" action="{{ url_for('order.create_order') }}">
+                                
+                                <!-- 客户信息 -->
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <h5 class="text-primary mb-3"><i class="bi bi-person me-2"></i>客户信息</h5>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label required-field">客户名称</label>
+                                        <input type="text" class="form-control" name="customer_name" required 
+                                               placeholder="请输入客户名称">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">联系人</label>
+                                        <input type="text" class="form-control" name="contact_person" 
+                                               placeholder="请输入联系人姓名">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">联系电话</label>
+                                        <input type="text" class="form-control" name="contact_phone" 
+                                               placeholder="请输入联系电话">
+                                    </div>
+                                </div>
+                                
+                                <!-- 产品明细 -->
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <h5 class="text-primary mb-3">
+                                            <i class="bi bi-box-seam me-2"></i>产品明细
+                                            <button type="button" class="btn btn-sm btn-outline-primary ms-3" onclick="addProductRow()">
+                                                <i class="bi bi-plus-lg"></i> 添加产品
+                                            </button>
+                                        </h5>
+                                    </div>
+                                    <div class="col-md-12" id="productContainer">
+                                        <!-- 产品行将通过JavaScript动态添加 -->
+                                    </div>
+                                </div>
+                                
+                                <!-- 生产信息 -->
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <h5 class="text-primary mb-3"><i class="bi bi-gear me-2"></i>生产信息</h5>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">要求完成日期</label>
+                                        <input type="date" class="form-control" name="required_date">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">生产备注</label>
+                                        <input type="text" class="form-control" name="production_note" 
+                                               placeholder="如有特殊要求请备注">
+                                    </div>
+                                </div>
+                                
+                                <!-- 金额汇总 -->
+                                <div class="total-section">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <div class="d-flex align-items-center">
+                                                <h5 class="me-3 mb-0">订单总金额：</h5>
+                                                <span class="amount-display fs-2" id="totalAmount">¥0.00</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <span class="text-muted" id="productCount">共 0 个产品</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 提交按钮 -->
+                                <div class="row mt-4">
+                                    <div class="col-md-12 text-center">
+                                        <button type="submit" class="btn btn-primary btn-lg px-5">
+                                            <i class="bi bi-check2-circle me-2"></i>提交订单
+                                        </button>
+                                        <a href="{{ url_for('order.order_list') }}" class="btn btn-outline-secondary btn-lg ms-2">
+                                            <i class="bi bi-x-circle me-2"></i>取消
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
-                <input type="file" class="form-control form-control-sm flex-grow-1" name="attachments_${productIndex - 1}" 
-                       multiple accept=".dwg,.dxf,.pdf" style="font-size: 11px;">
-            </div>
-        </td>
-        <td class="text-center align-middle">
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductRow(${productIndex})"><i class="bi bi-trash"></i></button>
-        </td>`;
-    tbody.appendChild(tr);
-    updateRowNumbers();
-}
-
-function removeProductRow(index) {
-    const tbody = document.getElementById('productsBody');
-    if (tbody.children.length <= 1) { alert('至少保留一个产品'); return; }
-    const row = document.getElementById(`product-row-${index}`);
-    if (row) { row.remove(); updateRowNumbers(); }
-}
-
-function updateRowNumbers() {
-    const rows = document.querySelectorAll('#productsBody tr');
-    rows.forEach((row, index) => { row.querySelector('td:first-child').textContent = index + 1; });
-    productIndex = rows.length;
-}
-
-function clearScreenshot(btn) {
-    const preview = btn.parentElement;
-    const area = preview.parentElement;
-    area.querySelector('input[name="screenshot[]"]').value = '';
-    preview.innerHTML = '<i class="bi bi-image" style="font-size: 12px;"></i>';
-    preview.classList.remove('has-image');
-}
-
-function showScreenshotModal(imgSrc) {
-    document.getElementById('screenshotModalImg').src = imgSrc;
-    new bootstrap.Modal(document.getElementById('screenshotModal')).show();
-}
-</script>
-
-<datalist id="colorList">
-    <option value="白色"><option value="黑色"><option value="红色"><option value="蓝色">
-    <option value="绿色"><option value="黄色"><option value="灰色"><option value="原木色">
-    <option value="胡桃木色"><option value="橡木色">
-</datalist>
-
-<div class="modal fade" id="screenshotModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-image me-2"></i>截图预览</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center p-0">
-                <img id="screenshotModalImg" src="" style="max-width: 100%; max-height: 80vh;">
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 产品行计数器
+        let productIndex = 0;
+        
+        // 固定颜色选项
+        const colorOptions = [
+            { value: '', text: '请选择颜色' },
+            { value: '透明', text: '透明' },
+            { value: '湖蓝', text: '湖蓝' },
+            { value: '草绿', text: '草绿' },
+            { value: '茶色', text: '茶色' },
+            { value: '灰色', text: '灰色' }
+        ];
+        
+        // 单位选项
+        const unitOptions = [
+            { value: '件', text: '件' },
+            { value: '套', text: '套' },
+            { value: '个', text: '个' },
+            { value: '米', text: '米' },
+            { value: '箱', text: '箱' }
+        ];
+        
+        // 创建产品行HTML
+        function createProductRow(index) {
+            const colorSelectOptions = colorOptions.map(opt => 
+                `<option value="${opt.value}">${opt.text}</option>`
+            ).join('');
+            
+            const unitSelectOptions = unitOptions.map(opt => 
+                `<option value="${opt.value}" ${opt.value === '件' ? 'selected' : ''}>${opt.text}</option>`
+            ).join('');
+            
+            return `
+                <div class="product-row" id="productRow${index}" data-index="${index}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center">
+                            <span class="product-index">${index + 1}</span>
+                            <strong class="text-primary">产品 ${index + 1}</strong>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeProductRow(${index})" title="删除此产品">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label required-field">产品名称</label>
+                            <input type="text" class="form-control" name="product_name_${index}" required 
+                                   placeholder="请输入产品名称">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label required-field">数量</label>
+                            <input type="number" class="form-control" name="quantity_${index}" 
+                                   value="1" min="1" onchange="calculateAmount(${index})" oninput="calculateAmount(${index})">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">单位</label>
+                            <select class="form-select" name="unit_${index}">
+                                ${unitSelectOptions}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label required-field">单价(元)</label>
+                            <input type="number" class="form-control amount-input" name="unit_price_${index}" 
+                                   value="0" min="0" step="0.01" placeholder="0.00"
+                                   onchange="calculateAmount(${index})" oninput="calculateAmount(${index})">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">金额(元)</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-light" name="amount_${index}" 
+                                       id="amount_${index}" value="0.00" readonly>
+                                <span class="input-group-text">元</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">颜色</label>
+                            <select class="form-select" name="color_${index}">
+                                ${colorSelectOptions}
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">尺寸</label>
+                            <input type="text" class="form-control" name="size_${index}" placeholder="如：10x20cm">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">克重</label>
+                            <input type="text" class="form-control" name="weight_${index}" placeholder="如：300g">
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">材质</label>
+                            <input type="text" class="form-control" name="material_${index}" placeholder="如：塑料">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">工艺要求</label>
+                            <input type="text" class="form-control" name="craft_${index}" placeholder="特殊工艺要求">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">其他要求</label>
+                            <input type="text" class="form-control" name="other_requirements_${index}" 
+                                   placeholder="其他定制要求">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">备注</label>
+                            <input type="text" class="form-control" name="remark_${index}" 
+                                   placeholder="产品备注信息">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 添加产品行
+        function addProductRow() {
+            const container = document.getElementById('productContainer');
+            const newRow = document.createElement('div');
+            newRow.innerHTML = createProductRow(productIndex);
+            container.appendChild(newRow.firstElementChild);
+            productIndex++;
+            updateProductCount();
+        }
+        
+        // 删除产品行
+        function removeProductRow(index) {
+            const row = document.getElementById(`productRow${index}`);
+            if (row) {
+                // 如果只剩一行，不允许删除
+                const allRows = document.querySelectorAll('.product-row');
+                if (allRows.length <= 1) {
+                    alert('至少需要保留一个产品');
+                    return;
+                }
+                row.remove();
+                recalculateAllAmounts();
+                renumberProducts();
+            }
+        }
+        
+        // 重新编号产品
+        function renumberProducts() {
+            const rows = document.querySelectorAll('.product-row');
+            rows.forEach((row, idx) => {
+                const index = row.dataset.index;
+                const productIndexSpan = row.querySelector('.product-index');
+                const strongText = row.querySelector('.text-primary strong');
+                if (productIndexSpan) {
+                    productIndexSpan.textContent = idx + 1;
+                }
+                if (strongText) {
+                    strongText.textContent = `产品 ${idx + 1}`;
+                }
+            });
+        }
+        
+        // 计算单行金额
+        function calculateAmount(index) {
+            const quantityInput = document.querySelector(`[name="quantity_${index}"]`);
+            const priceInput = document.querySelector(`[name="unit_price_${index}"]`);
+            const amountInput = document.getElementById(`amount_${index}`);
+            
+            if (quantityInput && priceInput && amountInput) {
+                let quantity = parseFloat(quantityInput.value) || 0;
+                let price = parseFloat(priceInput.value) || 0;
+                let amount = quantity * price;
+                
+                amountInput.value = amount.toFixed(2);
+                calculateTotalAmount();
+            }
+        }
+        
+        // 计算订单总金额
+        function calculateTotalAmount() {
+            let total = 0;
+            const amountInputs = document.querySelectorAll('input[id^="amount_"]');
+            
+            amountInputs.forEach(input => {
+                let value = parseFloat(input.value) || 0;
+                total += value;
+            });
+            
+            document.getElementById('totalAmount').textContent = '¥' + total.toFixed(2);
+            updateProductCount();
+        }
+        
+        // 重新计算所有金额（删除行后）
+        function recalculateAllAmounts() {
+            const rows = document.querySelectorAll('.product-row');
+            rows.forEach(row => {
+                const index = row.dataset.index;
+                calculateAmount(index);
+            });
+        }
+        
+        // 更新产品计数
+        function updateProductCount() {
+            const count = document.querySelectorAll('.product-row').length;
+            document.getElementById('productCount').textContent = `共 ${count} 个产品`;
+        }
+        
+        // 表单提交前验证
+        document.getElementById('orderForm').addEventListener('submit', function(e) {
+            const rows = document.querySelectorAll('.product-row');
+            if (rows.length === 0) {
+                e.preventDefault();
+                alert('请至少添加一个产品');
+                return false;
+            }
+            
+            // 验证至少有一个产品有名称
+            let hasValidProduct = false;
+            rows.forEach(row => {
+                const nameInput = row.querySelector('input[name^="product_name_"]');
+                if (nameInput && nameInput.value.trim()) {
+                    hasValidProduct = true;
+                }
+            });
+            
+            if (!hasValidProduct) {
+                e.preventDefault();
+                alert('请至少填写一个产品的名称');
+                return false;
+            }
+        });
+        
+        // 页面加载时添加初始产品行
+        document.addEventListener('DOMContentLoaded', function() {
+            addProductRow();
+        });
+    </script>
+</body>
+</html>
