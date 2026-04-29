@@ -417,3 +417,123 @@ def order_preview(order_no):
     """订单预览页面（无需登录）"""
     order = Order.query.filter_by(order_no=order_no).first_or_404()
     return render_template('order_preview.html', order=order)
+
+@order_bp.route('/payment_records')
+@login_required
+def payment_records():
+    """付款记录列表"""
+    if current_user.role != 'admin':
+        flash('您没有权限访问此页面', 'danger')
+        return redirect(url_for('order.dashboard'))
+    
+    # 获取筛选参数
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    payment_method_filter = request.args.get('payment_method', '')
+    
+    # 构建查询
+    from models import Payment, Order
+    query = Payment.query
+    
+    if start_date:
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Payment.payment_date >= start_dt)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            end_dt = end_dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(Payment.payment_date <= end_dt)
+        except ValueError:
+            pass
+    
+    if payment_method_filter:
+        query = query.filter_by(payment_method=payment_method_filter)
+    
+    payments = query.order_by(Payment.payment_date.desc()).all()
+    
+    # 计算统计数据
+    total_amount = sum(float(p.amount) for p in payments)
+    order_ids = set(p.order_id for p in payments)
+    
+    # 获取统计数据（用于侧边栏）
+    if current_user.role == 'admin':
+        total_orders = Order.query.count()
+        pending_orders = Order.query.filter(Order.status.in_(['quoting', 'confirmed', 'pending'])).count()
+        producing_orders = Order.query.filter_by(status='producing').count()
+        completed_orders = Order.query.filter_by(status='completed').count()
+    else:
+        total_orders = 0
+        pending_orders = 0
+        producing_orders = 0
+        completed_orders = 0
+    
+    stats = {
+        'total': total_orders,
+        'pending': pending_orders,
+        'producing': producing_orders,
+        'completed': completed_orders
+    }
+    
+    return render_template('payment_records.html', 
+                           payments=payments,
+                           total_amount=f'{total_amount:.2f}',
+                           order_count=len(order_ids),
+                           start_date=start_date,
+                           end_date=end_date,
+                           payment_method_filter=payment_method_filter,
+                           stats=stats)
+
+@order_bp.route('/order/<int:order_id>/add_payment', methods=['POST'])
+@login_required
+def add_payment(order_id):
+    """添加付款记录"""
+    order = Order.query.get_or_404(order_id)
+    
+    # 权限检查
+    if current_user.role not in ['admin', 'sales']:
+        return jsonify({'success': False, 'message': '您没有权限执行此操作'})
+    
+    if current_user.role == 'sales' and order.created_by != current_user.id:
+        return jsonify({'success': False, 'message': '您只能为自己的订单添加付款记录'})
+    
+    data = request.get_json()
+    
+    try:
+        amount = Decimal(str(data.get('amount', 0)))
+        if amount <= 0:
+            return jsonify({'success': False, 'message': '付款金额必须大于0'})
+        
+        payment_date_str = data.get('payment_date')
+        if not payment_date_str:
+            return jsonify({'success': False, 'message': '请选择付款日期'})
+        
+        payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d')
+        payment_method = data.get('payment_method', '')
+        remark = data.get('remark', '')
+        
+        # 创建付款记录
+        payment = Payment(
+            order_id=order.id,
+            amount=amount,
+            payment_date=payment_date,
+            payment_method=payment_method if payment_method else None,
+            remark=remark if remark else None,
+            created_by=current_user.id
+        )
+        db.session.add(payment)
+        
+        # 更新订单已付金额
+        order.paid_amount = (order.paid_amount or Decimal('0')) + amount
+        order.update_payment_status()
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': '付款记录添加成功'})
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'添加失败：{str(e)}'})

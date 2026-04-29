@@ -169,6 +169,20 @@
                     <span>创建订单</span>
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('order.order_list', status='quoting') }}">
+                    <i class="bi bi-chat-left-text"></i>
+                    <span>报价管理</span>
+                </a>
+            </li>
+            {% endif %}
+            {% if current_user.role == 'admin' %}
+            <li>
+                <a href="{{ url_for('order.payment_records') }}">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>付款记录</span>
+                </a>
+            </li>
             {% endif %}
             <li>
                 <a href="{{ url_for('order.order_list') }}">
