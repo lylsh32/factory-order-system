@@ -73,10 +73,7 @@ def order_list():
     if status_filter:
         query = query.filter_by(status=status_filter)
     
-    # 预加载 products 和 attachments
-    orders = query.options(
-        db.joinedload(Order.products).joinedload(Product.attachments)
-    ).order_by(Order.created_at.desc()).all()
+    orders = query.order_by(Order.created_at.desc()).all()
     
     return render_template('order_list.html', orders=orders, status_filter=status_filter)
 
@@ -304,10 +301,7 @@ def create_order():
 @order_bp.route('/order/<int:order_id>')
 @login_required
 def order_detail(order_id):
-    # 预加载 products 和 attachments
-    order = Order.query.options(
-        db.joinedload(Order.products).joinedload(Product.attachments)
-    ).get_or_404(order_id)
+    order = Order.query.get_or_404(order_id)
     
     if current_user.role == 'worker' and order.assigned_to not in [current_user.id, None]:
         flash('您没有权限查看此订单', 'danger')
@@ -439,11 +433,7 @@ def order_qrcode(order_id):
 @order_bp.route('/preview/<order_no>')
 def order_preview(order_no):
     """订单预览页面（无需登录）"""
-    order = Order.query.options(
-        db.joinedload(Order.products).joinedload(Product.attachments)
-    ).filter_by(order_no=order_no).first_or_404()
-    return render_template('order_preview.html', order=order)
-
+    order = Order.query.filter_by(order_no=order_no).first_or_404()
 @order_bp.route('/payment_records')
 @login_required
 def payment_records():
