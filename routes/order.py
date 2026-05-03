@@ -211,7 +211,7 @@ def create_order():
         today = datetime.now().strftime('%Y%m%d')
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         today_orders_count = Order.query.filter(Order.created_at >= today_start).count()
-        order_no = f"ORD-{today}-{str(today_orders_count + 1).zfill(3)}"
+        order_no = f'ORD-{today}-{str(today_orders_count + 1).zfill(3)}'
         
         # 创建订单
         order = Order(
@@ -263,8 +263,8 @@ def create_order():
                 file = all_files[i]
                 if allowed_file(file.filename):
                     filename = secure_filename(file.filename)
-                    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                    new_filename = f"{order.id}_{product.id}_{timestamp}_{filename}"
+                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                    new_filename = f'{order.id}_{product.id}_{timestamp}_{filename}'
                     filepath = os.path.join(upload_folder, new_filename)
                     file.save(filepath)
                     attachment = Attachment(
@@ -296,11 +296,11 @@ def order_detail(order_id):
     return render_template('order_detail.html', order=order)
 
 
-@order_bp.route("/order/<int:order_id>/overview")
+@order_bp.route('/order/<int:order_id>/overview')
 @login_required
 def order_overview(order_id):
     order = Order.query.get_or_404(order_id)
-    return render_template("order_overview.html", order=order)
+    return render_template('order_overview.html', order=order)
 @order_bp.route('/order/<int:order_id>/update_status', methods=['POST'])
 @login_required
 def update_order_status(order_id):
@@ -343,7 +343,7 @@ def update_order_status(order_id):
 @order_bp.route('/order/<int:order_id>/claim', methods=['POST'])
 @login_required
 def claim_order(order_id):
-    """生产人员认领订单"""
+    '''生产人员认领订单'''
     order = Order.query.get_or_404(order_id)
     
     if current_user.role != 'worker':
@@ -399,7 +399,7 @@ def delete_order(order_id):
 @order_bp.route('/order/<int:order_id>/qrcode')
 @login_required
 def order_qrcode(order_id):
-    """生成订单二维码"""
+    '''生成订单二维码'''
     import qrcode
     from io import BytesIO
     import base64
@@ -410,7 +410,7 @@ def order_qrcode(order_id):
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=4)
     qr.add_data(preview_url)
     qr.make(fit=True)
-    img = qr.make_image(fill_color="black", back_color="white")
+    img = qr.make_image(fill_color='black', back_color='white')
     
     buffer = BytesIO()
     img.save(buffer, format='PNG')
@@ -424,14 +424,14 @@ def order_qrcode(order_id):
 
 @order_bp.route('/preview/<order_no>')
 def order_preview(order_no):
-    """订单预览页面（无需登录）"""
+    '''订单预览页面（无需登录）'''
     order = Order.query.filter_by(order_no=order_no).first_or_404()
     return render_template('order_preview.html', order=order)
 
 @order_bp.route('/payment_records')
 @login_required
 def payment_records():
-    """付款记录列表"""
+    '''付款记录列表'''
     if current_user.role != 'admin':
         flash('您没有权限访问此页面', 'danger')
         return redirect(url_for('order.dashboard'))
