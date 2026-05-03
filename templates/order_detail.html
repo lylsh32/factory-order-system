@@ -28,9 +28,10 @@
                             <label class="text-muted small mb-1">订单号</label>
                             <div class="fw-bold fs-5">{{ order.order_no }}</div>
                         </div>
+                        {% if current_user.role in ['admin', 'sales'] %}
                         <div class="col-md-6">
-                            {% if current_user.role in ["admin", "sales"] %}<label class="text-muted small mb-1">客户名称</label>
-                            <div class="fw-bold fs-5">{{ order.customer_name }}</div>{% endif %}
+                            <label class="text-muted small mb-1">客户名称</label>
+                            <div class="fw-bold fs-5">{{ order.customer_name }}</div>
                         </div>
                         {% if order.contact_person %}
                         <div class="col-md-6">
@@ -40,9 +41,10 @@
                         {% endif %}
                         {% if order.contact_phone %}
                         <div class="col-md-6">
-                            {% if current_user.role in ["admin", "sales"] %}<label class="text-muted small mb-1">联系电话</label>
-                            <div class="fw-500">{{ order.contact_phone }}</div>{% endif %}
+                            <label class="text-muted small mb-1">联系电话</label>
+                            <div class="fw-500">{{ order.contact_phone }}</div>
                         </div>
+                        {% endif %}
                         {% endif %}
                     </div>
                     
@@ -60,9 +62,11 @@
                                     <th>厚度(mm)</th>
                                     <th>颜色</th>
                                     <th>数量</th>
-                                    <th>{% if current_user.role in ["admin", "sales"] %}单价{% endif %}</th>
+                                    {% if current_user.role in ['admin', 'sales'] %}
+                                    <th>单价</th>
                                     <th>单位</th>
-                                    <th>{% if current_user.role in ["admin", "sales"] %}金额{% endif %}</th>
+                                    <th>金额</th>
+                                    {% endif %}
                                     <th>图纸</th>
                                 </tr>
                             </thead>
@@ -75,20 +79,23 @@
                                     <td>{{ product.thickness if product.thickness else '-' }}</td>
                                     <td>{{ product.color if product.color else '-' }}</td>
                                     <td>{{ product.quantity }}</td>
+                                    {% if current_user.role in ['admin', 'sales'] %}
                                     <td>{{ "%.2f"|format(product.unit_price) if product.unit_price else '0.00' }}</td>
                                     <td>{{ product.unit or '件' }}</td>
                                     <td class="fw-bold">{{ "%.2f"|format(product.amount) if product.amount else '0.00' }}</td>
+                                    {% endif %}
                                     <td>
+                                        <span class="badge bg-secondary">产品{{ product.id }}:{{ product.attachments|length }}个附件</span><br>
                                         {% if product.screenshot %}
-                                        <a href="#" class="btn btn-sm btn-outline-info me-1" onclick="showScreenshot('{{ product.screenshot }}')">
+                                        <a href="#" class="btn btn-sm btn-outline-info me-1 mb-1" onclick="showScreenshot('{{ product.screenshot }}')">
                                             <i class="bi bi-image"></i> 截图
                                         </a>
                                         {% endif %}
                                         {% if product.attachments %}
                                         {% for attachment in product.attachments %}
                                         <a href="{{ url_for('order.download_attachment', attachment_id=attachment.id) }}" 
-                                           class="btn btn-link btn-sm p-0 me-1">
-                                            <i class="bi bi-file-earmark text-primary"></i> {{ attachment.filename }}
+                                           class="btn btn-sm btn-outline-primary me-1 mb-1" style="min-width: 100px;">
+                                            <i class="bi bi-download"></i> 下载图纸
                                         </a>
                                         {% endfor %}
                                         {% endif %}
@@ -101,9 +108,14 @@
                             </tbody>
                             <tfoot class="bg-light">
                                 <tr>
+                                    {% if current_user.role in ['admin', 'sales'] %}
                                     <td colspan="8" class="text-end fw-bold">合计：</td>
                                     <td class="fw-bold">{{ "%.2f"|format(order.total_amount) if order.total_amount else '0.00' }}</td>
                                     <td></td>
+                                    {% else %}
+                                    <td colspan="6" class="text-end fw-bold"></td>
+                                    <td></td>
+                                    {% endif %}
                                 </tr>
                             </tfoot>
                         </table>
@@ -121,16 +133,14 @@
                 </div>
             </div>
 
-            {% if current_user.role in ["admin", "sales"] %}
             <!-- 付款信息模块 -->
+            {% if current_user.role in ['admin', 'sales'] %}
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>付款信息</h5>
-                    {% if current_user.role in ['admin', 'sales'] %}
-                    <button class="btn btn-primary btn-sm" onclick="showAddPaymentModal()">
+                    {% if current_user.role in ["admin", "sales"] %}<button class="btn btn-primary btn-sm" onclick="showAddPaymentModal()">
                         <i class="bi bi-plus-circle me-1"></i>添加付款
                     </button>
-                    {% endif %}
                 </div>
                 <div class="card-body">
                     <div class="row g-3 mb-4">
@@ -149,11 +159,12 @@
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded text-center">
                                 <div class="text-muted small mb-1">待付金额</div>
-                                <div class="fs-4 fw-bold text-danger">¥{{ "%.2f"|format((order.total_amount - order.paid_amount) if order.total_amount and order.paid_amount else order.total_amount or 0) }}</div>
+                                <div class="fs-4 fw-bold text-danger">{% if current_user.role in ["admin", "sales"] %}¥{{ "%.2f"|format((order.total_amount - order.paid_amount) if order.total_amount and order.paid_amount else order.total_amount or 0) }}{% endif %}</div>
                             </div>
                         </div>
                     </div>
                     
+                    {% if current_user.role in ["admin", "sales"] %}
                     <!-- 付款状态 -->
                     <div class="mb-3">
                         <span class="me-2">付款状态：</span>
@@ -168,6 +179,7 @@
 
                     <!-- 付款记录列表 -->
                     {% if order.payments %}
+                    {% endif %}
                     <h6 class="text-muted mb-3"><i class="bi bi-list-ul me-2"></i>付款记录</h6>
                     <div class="table-responsive">
                         <table class="table table-sm table-hover">
@@ -208,9 +220,9 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
         </div>
 
-            {% endif %}
         <!-- 右侧操作区 -->
         <div class="col-lg-4">
             <!-- 状态操作 -->
