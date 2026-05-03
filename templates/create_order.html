@@ -160,7 +160,7 @@ function addProductRow() {
         '<td><input type="number" class="form-control form-control-sm" name="unit_price[]" placeholder="单价" step="0.01" min="0" oninput="calculateAmount(' + productIndex + ')"></td>' +
         '<td>' + unitSelect + '</td>' +
         '<td><input type="text" class="form-control form-control-sm amount-cell" id="amount-' + productIndex + '" value="0.00" readonly style="background: #f8f9fa;"></td>' +
-        '<td><div class="d-flex gap-1"><input type="file" onchange="onFileSelected(this)"class="form-control form-control-sm d-none" onchange="onFileSelected('' + productIndex + '', this)" name="attachments_' + productIndex + '[]" multiple accept=".dwg,.dxf,.pdf">' +
+        '<td><div class="d-flex gap-1"><input type="file" onchange="onFileSelected('" + productIndex + '", this)"class="form-control form-control-sm d-none" name="attachments_' + productIndex + '[]" multiple accept=".dwg,.dxf,.pdf">' +
         '<input type="hidden" name="screenshot[]">' +
         '<button type="button" class="btn btn-outline-secondary btn-sm flex-fill" title="上传图纸" onclick="this.parentElement.querySelector(\'input[type=file]\').click()"><i class="bi bi-upload"></i> 上传</button>' +
         '<button type="button" class="btn btn-outline-info btn-sm flex-fill" title="粘贴截图" onclick="pasteScreenshot(' + productIndex + ')"><i class="bi bi-clipboard"></i> 截图</button>' +
@@ -219,6 +219,18 @@ function calculateTotalAmount() {
     document.getElementById('totalAmount').textContent = total.toFixed(2);
 }
 
+function onFileSelected(rowIndex, input) {
+    if (input.files && input.files.length > 0) {
+        const btn = input.parentElement.querySelector(".btn-outline-secondary");
+        if (btn) {
+            btn.classList.remove("btn-outline-secondary");
+            btn.classList.add("btn-success");
+            btn.innerHTML = "<i class="bi bi-check-lg"></i> 已上传(" + input.files.length + ")";
+        }
+    }
+}
+
+
 function pasteScreenshot(rowIndex) {
     const row = document.getElementById('product-row-' + rowIndex);
     if (!row) return;
@@ -274,15 +286,5 @@ function pasteScreenshot(rowIndex) {
 document.addEventListener('DOMContentLoaded', function() {
     addProductRow();
 });
-function onFileSelected(input) {
-    if (input.files && input.files.length > 0) {
-        const btn = input.parentElement.querySelector(".btn-outline-secondary");
-        if (btn) {
-            btn.classList.remove("btn-outline-secondary");
-            btn.classList.add("btn-success");
-            btn.innerHTML = "<i class="bi bi-check-lg"></i> 已上传(" + input.files.length + ")";
-        }
-    }
-}
 </script>
 {% endblock %}
