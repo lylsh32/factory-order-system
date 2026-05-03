@@ -236,13 +236,13 @@ def create_order():
         upload_folder = current_app.config['UPLOAD_FOLDER']
         os.makedirs(upload_folder, exist_ok=True)
         
-        # 第一步：收集所有附件字段，按数字排序
-        all_attachment_keys = []
-        for key in request.files.keys():
+        # 先把所有附件的key都拿出来，转成普通list，不要保留request.files的引用
+        attachment_keys = []
+        for key in list(request.files.keys()):
             if key.startswith('attachments_'):
-                all_attachment_keys.append(key)
-        # 按数字排序：attachments_0, attachments_1, attachments_3 → [0,1,3]
-        all_attachment_keys.sort(key=lambda x: int(x.split('_')[1]))
+                attachment_keys.append(key)
+        # 按数字排序
+        attachment_keys.sort(key=lambda x: int(x.split('_')[1]))
         
         for i, product_data in enumerate(products_data):
             product = Product(
@@ -261,25 +261,29 @@ def create_order():
             db.session.add(product)
             db.session.flush()
             
-            # 第二步：按产品顺序逐个分配附件，不管附件编号是多少
-            if i < len(all_attachment_keys):
-                attachment_key = all_attachment_keys[i]
-                files = request.files.getlist(attachment_key)
-                for file in files:
-                    if file and file.filename and allowed_file(file.filename):
-                        filename = secure_filename(file.filename)
-                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-                        new_filename = f"{order.id}_{product.id}_{timestamp}_{filename}"
-                        filepath = os.path.join(upload_folder, new_filename)
-                        
-                        file.save(filepath)
-                        
-                        attachment = Attachment(
-                            product_id=product.id,
-                            filename=filename,
-                            filepath=new_filename
-                        )
-                        db.session.add(attachment)
+            # 处理附件
+            if i < len(attachment_keys):
+                try:
+                    attachment_key = attachment_keys[i]
+                    files = request.files.getlist(attachment_key)
+                    for file in files:
+                        if file and file.filename and allowed_file(file.filename):
+                            filename = secure_filename(file.filename)
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                            new_filename = f"{order.id}_{product.id}_{timestamp}_{filename}"
+                            filepath = os.path.join(upload_folder, new_filename)
+                            
+                            file.save(filepath)
+                            
+                            attachment = Attachment(
+                                product_id=product.id,
+                                filename=filename,
+                                filepath=new_filename
+                            )
+                            db.session.add(attachment)
+                except Exception:
+                    # 附件保存失败不影响订单
+                    pass
         
         db.session.commit()
         flash(f'订单创建成功！订单号：{order.order_no}', 'success')
