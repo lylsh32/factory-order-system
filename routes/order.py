@@ -417,3 +417,52 @@ def order_preview(order_no):
     """订单预览页面（无需登录）"""
     order = Order.query.filter_by(order_no=order_no).first_or_404()
     return render_template('order_preview.html', order=order)
+
+@order_bp.route('/payment_records')
+@login_required
+def payment_records():
+    """付款记录列表"""
+    if current_user.role != 'admin':
+        flash('您没有权限访问此页面', 'danger')
+        return redirect(url_for('order.dashboard'))
+    
+    # 获取筛选参数
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    payment_method_filter = request.args.get('payment_method', '')
+    
+    from models import Payment
+    
+    query = Payment.query.order_by(Payment.payment_date.desc())
+    
+    # 日期筛选
+    if start_date:
+        try:
+            start = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Payment.payment_date >= start)
+        except:
+            pass
+    
+    if end_date:
+        try:
+            end = datetime.strptime(end_date, '%Y-%m-%d')
+            end = end.replace(hour=23, minute=59, second=59)
+            query = query.filter(Payment.payment_date <= end)
+        except:
+            pass
+    
+    # 付款方式筛选
+    if payment_method_filter:
+        query = query.filter(Payment.payment_method == payment_method_filter)
+    
+    payments = query.all()
+    
+    # 统计
+    total_amount = sum(p.amount for p in payments)
+    
+    return render_template('payment_records.html', 
+                          payments=payments,
+                          total_amount=total_amount,
+                          start_date=start_date,
+                          end_date=end_date,
+                          payment_method_filter=payment_method_filter)
