@@ -108,12 +108,12 @@ def create_order():
         'completed': completed_orders
     }
     
-        # 调试：看看传上来的附件key是什么
-        flash("附件keys: " + str(list(request.files.keys())), "info")
     if request.method == 'POST':
         customer_name = request.form.get('customer_name', '').strip()
         contact_person = customer_name
         contact_phone = request.form.get('contact_phone', '').strip()    # 新增
+        # 调试：看看传上来的附件key是什么
+        flash("附件keys: " + str(list(request.files.keys())), "info")
         remark = request.form.get('remark', '').strip()
         assigned_to = request.form.get('assigned_to', '')
         
