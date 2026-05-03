@@ -273,7 +273,6 @@ def create_order():
                         filepath=new_filename
                     )
                     db.session.add(attachment)
-                        db.session.add(attachment)
         
         db.session.commit()
         flash(f'订单创建成功！订单号：{order.order_no}', 'success')
