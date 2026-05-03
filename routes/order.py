@@ -73,7 +73,10 @@ def order_list():
     if status_filter:
         query = query.filter_by(status=status_filter)
     
-    orders = query.order_by(Order.created_at.desc()).all()
+    # 预加载 products 和 attachments
+    orders = query.options(
+        db.joinedload(Order.products).joinedload(Product.attachments)
+    ).order_by(Order.created_at.desc()).all()
     
     return render_template('order_list.html', orders=orders, status_filter=status_filter)
 
@@ -418,7 +421,9 @@ def order_qrcode(order_id):
 @order_bp.route('/preview/<order_no>')
 def order_preview(order_no):
     """订单预览页面（无需登录）"""
-    order = Order.query.filter_by(order_no=order_no).first_or_404()
+    order = Order.query.options(
+        db.joinedload(Order.products).joinedload(Product.attachments)
+    ).filter_by(order_no=order_no).first_or_404()
     return render_template('order_preview.html', order=order)
 
 @order_bp.route('/payment_records')

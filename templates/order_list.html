@@ -61,6 +61,7 @@
                         {% endif %}
                         <th>产品数</th>
                         <th>总数量</th>
+                        <th>图纸/截图</th>
                         <th>状态</th>
                         {% if current_user.role == 'admin' %}
                         <th>负责人</th>
@@ -82,6 +83,21 @@
                         {% endif %}
                         <td>{{ order.products|length }}</td>
                         <td>{{ order.total_quantity }}</td>
+                        <td>
+                            {% for product in order.products %}
+                                {% if product.screenshot or product.attachments %}
+                                <div class="mb-1">
+                                    {{ product.product_name|truncate(8, true) }}:
+                                    {% if product.screenshot %}
+                                    <a href="{{ url_for('order.order_detail', order_id=order.id) }}" class="btn btn-sm btn-outline-info">截图</a>
+                                    {% endif %}
+                                    {% for attachment in product.attachments %}
+                                    <a href="{{ url_for('order.download_attachment', attachment_id=attachment.id) }}" class="btn btn-sm btn-outline-primary">下载</a>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
                         <td>
                             <span class="status-badge status-{{ order.status }}">
                                 {{ order.get_status_text() }}
