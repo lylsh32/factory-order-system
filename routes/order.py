@@ -236,11 +236,13 @@ def create_order():
         upload_folder = current_app.config['UPLOAD_FOLDER']
         os.makedirs(upload_folder, exist_ok=True)
         
-        # 收集所有附件字段，按数字排序
-        attachment_fields = sorted(
-            [k for k in request.files.keys() if k.startswith('attachments_')],
-            key=lambda x: int(x.split('_')[1])
-        )
+        # 第一步：收集所有附件字段，按数字排序
+        all_attachment_keys = []
+        for key in request.files.keys():
+            if key.startswith('attachments_'):
+                all_attachment_keys.append(key)
+        # 按数字排序：attachments_0, attachments_1, attachments_3 → [0,1,3]
+        all_attachment_keys.sort(key=lambda x: int(x.split('_')[1]))
         
         for i, product_data in enumerate(products_data):
             product = Product(
@@ -259,9 +261,9 @@ def create_order():
             db.session.add(product)
             db.session.flush()
             
-            # 处理附件 - 按附件字段顺序逐个匹配产品
-            if i < len(attachment_fields):
-                attachment_key = attachment_fields[i]
+            # 第二步：按产品顺序逐个分配附件，不管附件编号是多少
+            if i < len(all_attachment_keys):
+                attachment_key = all_attachment_keys[i]
                 files = request.files.getlist(attachment_key)
                 for file in files:
                     if file and file.filename and allowed_file(file.filename):
