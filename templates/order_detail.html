@@ -93,7 +93,7 @@
                                         {% if product.attachments %}
                                         {% for attachment in product.attachments %}
                                         <a href="{{ url_for('order.download_attachment', attachment_id=attachment.id) }}" 
-                                           class="btn btn-sm btn-outline-primary me-1 mb-1">
+                                           class="btn btn-sm btn-outline-primary me-1 mb-1" style="min-width: 100px;">
                                             <i class="bi bi-download"></i> 下载图纸
                                         </a>
                                         {% endfor %}
