@@ -283,7 +283,10 @@ def create_order():
 @order_bp.route('/order/<int:order_id>')
 @login_required
 def order_detail(order_id):
-    order = Order.query.get_or_404(order_id)
+    # 预加载 products 和 attachments
+    order = Order.query.options(
+        db.joinedload(Order.products).joinedload(Product.attachments)
+    ).get_or_404(order_id)
     
     if current_user.role == 'worker' and order.assigned_to not in [current_user.id, None]:
         flash('您没有权限查看此订单', 'danger')
