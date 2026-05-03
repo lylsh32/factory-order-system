@@ -29,11 +29,12 @@
                             <div class="fw-bold fs-5">{{ order.order_no }}</div>
                         </div>
                         <div class="col-md-6">
+                        <div class="col-md-6">
                             {% if current_user.role in ["admin", "sales"] %}
                             <label class="text-muted small mb-1">客户名称</label>
                             <div class="fw-bold fs-5">{{ order.customer_name }}</div>
-                        </div>
                             {% endif %}
+                        </div>
                         {% if order.contact_person %}
                         <div class="col-md-6">
                             <label class="text-muted small mb-1">联系人</label>
@@ -41,13 +42,15 @@
                         </div>
                         {% endif %}
                         {% if order.contact_phone %}
-                            {% if current_user.role in ["admin", "sales"] %}
                         <div class="col-md-6">
+                        <div class="col-md-6">
+                            {% if current_user.role in ["admin", "sales"] %}
                             <label class="text-muted small mb-1">联系电话</label>
                             <div class="fw-500">{{ order.contact_phone }}</div>
+                            {% endif %}
+                        </div>
                         </div>
                         {% endif %}
-                            {% endif %}
                     </div>
                     
                     <!-- 产品列表 -->
@@ -61,12 +64,12 @@
                                     <th>#</th>
                                     <th>产品名称</th>
                                     <th>长×宽(mm)</th>
-                                    <th>厚度(mm)</th>
+                                    <th>{% if current_user.role in ["admin", "sales"] %}单价{% endif %}</th>
                                     <th>颜色</th>
-                                    <th>数量</th>
-                                    {% if current_user.role in ["admin", "sales"] %}<th>单价</th>{% endif %}
+                                    <th>{% if current_user.role in ["admin", "sales"] %}金额{% endif %}</th>
+                                    <th>单价</th>
                                     <th>单位</th>
-                                    {% if current_user.role in ["admin", "sales"] %}<th>金额</th>{% endif %}
+                                    <th>金额</th>
                                     <th>图纸</th>
                                 </tr>
                             </thead>
@@ -76,12 +79,12 @@
                                     <td>{{ loop.index }}</td>
                                     <td class="fw-500">{{ product.product_name }}</td>
                                     <td>{{ product.length }} × {{ product.width }}</td>
-                                    <td>{{ product.thickness if product.thickness else '-' }}</td>
+                                    <td>{% if current_user.role in ["admin", "sales"] %}{{ "%.2f"|format(product.unit_price) if product.unit_price else "0.00" }}{% endif %}</td>
                                     <td>{{ product.color if product.color else '-' }}</td>
-                                    <td>{{ product.quantity }}</td>
-                                    {% if current_user.role in ["admin", "sales"] %}<td>{{ "%.2f"|format(product.unit_price) if product.unit_price else "0.00" }}</td>{% endif %}
+                                    <td class="fw-bold">{% if current_user.role in ["admin", "sales"] %}{{ "%.2f"|format(product.amount) if product.amount else "0.00" }}{% endif %}</td>
+                                    <td>{{ "%.2f"|format(product.unit_price) if product.unit_price else '0.00' }}</td>
                                     <td>{{ product.unit or '件' }}</td>
-                                    {% if current_user.role in ["admin", "sales"] %}<td class="fw-bold">{{ "%.2f"|format(product.amount) if product.amount else "0.00" }}</td>{% endif %}
+                                    <td class="fw-bold">{{ "%.2f"|format(product.amount) if product.amount else '0.00' }}</td>
                                     <td>
                                         {% if product.screenshot %}
                                         <a href="#" class="btn btn-sm btn-outline-info me-1" onclick="showScreenshot('{{ product.screenshot }}')">
@@ -123,10 +126,10 @@
                     </div>
                     {% endif %}
                 </div>
+            {% if current_user.role in ["admin", "sales"] %}
             </div>
 
             <!-- 付款信息模块 -->
-            {% if current_user.role in ["admin", "sales"] %}
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>付款信息</h5>
@@ -212,10 +215,10 @@
                     {% endif %}
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <!-- 右侧操作区 -->
-            {% endif %}
         <div class="col-lg-4">
             <!-- 状态操作 -->
             {% if current_user.role == 'worker' %}
