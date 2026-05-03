@@ -121,12 +121,13 @@
                 </div>
             </div>
 
+            {% if current_user.role in ["admin", "sales"] %}
             <!-- 付款信息模块 -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>付款信息</h5>
                     {% if current_user.role in ['admin', 'sales'] %}
-                    {% if current_user.role in ["admin", "sales"] %}<button class="btn btn-primary btn-sm" onclick="showAddPaymentModal()">
+                    <button class="btn btn-primary btn-sm" onclick="showAddPaymentModal()">
                         <i class="bi bi-plus-circle me-1"></i>添加付款
                     </button>
                     {% endif %}
@@ -148,12 +149,11 @@
                         <div class="col-md-4">
                             <div class="p-3 bg-light rounded text-center">
                                 <div class="text-muted small mb-1">待付金额</div>
-                                <div class="fs-4 fw-bold text-danger">{% if current_user.role in ["admin", "sales"] %}¥{{ "%.2f"|format((order.total_amount - order.paid_amount) if order.total_amount and order.paid_amount else order.total_amount or 0) }}{% endif %}</div>
+                                <div class="fs-4 fw-bold text-danger">¥{{ "%.2f"|format((order.total_amount - order.paid_amount) if order.total_amount and order.paid_amount else order.total_amount or 0) }}</div>
                             </div>
                         </div>
                     </div>
                     
-                    {% if current_user.role in ["admin", "sales"] %}
                     <!-- 付款状态 -->
                     <div class="mb-3">
                         <span class="me-2">付款状态：</span>
@@ -168,7 +168,6 @@
 
                     <!-- 付款记录列表 -->
                     {% if order.payments %}
-                    {% endif %}
                     <h6 class="text-muted mb-3"><i class="bi bi-list-ul me-2"></i>付款记录</h6>
                     <div class="table-responsive">
                         <table class="table table-sm table-hover">
@@ -211,6 +210,7 @@
             </div>
         </div>
 
+            {% endif %}
         <!-- 右侧操作区 -->
         <div class="col-lg-4">
             <!-- 状态操作 -->
