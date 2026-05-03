@@ -85,6 +85,7 @@
                                     <td class="fw-bold">{{ "%.2f"|format(product.amount) if product.amount else '0.00' }}</td>
                                     {% endif %}
                                     <td>
+                                        <span class="badge bg-secondary">产品{{ product.id }}:{{ product.attachments|length }}个附件</span><br>
                                         {% if product.screenshot %}
                                         <a href="#" class="btn btn-sm btn-outline-info me-1 mb-1" onclick="showScreenshot('{{ product.screenshot }}')">
                                             <i class="bi bi-image"></i> 截图
