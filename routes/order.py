@@ -295,6 +295,12 @@ def order_detail(order_id):
     
     return render_template('order_detail.html', order=order)
 
+
+@order_bp.route("/order/<int:order_id>/overview")
+@login_required
+def order_overview(order_id):
+    order = Order.query.get_or_404(order_id)
+    return render_template("order_overview.html", order=order)
 @order_bp.route('/order/<int:order_id>/update_status', methods=['POST'])
 @login_required
 def update_order_status(order_id):
