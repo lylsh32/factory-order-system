@@ -168,23 +168,36 @@ function addProductRow() {
         '<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductRow(' + productIndex + ')"><i class="bi bi-trash"></i></button></td>';
     
     tbody.appendChild(tr);
-    productIndex++;
-    updateRowNumbers();
+    productIndex = rows.length;  // 确保下一个索引
+    renumberProductRows();
 }
 
 function removeProductRow(index) {
     const row = document.getElementById('product-row-' + index);
     if (row) {
         row.remove();
+        // 重新编号所有产品行，确保索引连续
+        renumberProductRows();
         calculateTotalAmount();
-        updateRowNumbers();
     }
 }
 
-function updateRowNumbers() {
+function renumberProductRows() {
     const tbody = document.getElementById('productsBody');
     const rows = tbody.querySelectorAll('tr');
     rows.forEach(function(row, idx) {
+        row.id = 'product-row-' + idx;
+        // 更新上传按钮ID
+        const uploadBtn = row.querySelector('[id^="upload-btn-"]');
+        if (uploadBtn) {
+            uploadBtn.id = 'upload-btn-' + idx;
+        }
+        // 更新附件input的name
+        const fileInput = row.querySelector('input[type="file"]');
+        if (fileInput) {
+            fileInput.name = 'attachments_' + idx + '[]';
+        }
+        // 更新行号显示
         const firstTd = row.querySelector('td:first-child');
         if (firstTd) {
             firstTd.textContent = idx + 1;
