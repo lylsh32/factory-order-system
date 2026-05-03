@@ -94,7 +94,7 @@
                                         {% for attachment in product.attachments %}
                                         <a href="{{ url_for('order.download_attachment', attachment_id=attachment.id) }}" 
                                            class="btn btn-sm btn-outline-primary me-1 mb-1">
-                                            <i class="bi bi-file-earmark"></i> {{ attachment.filename|truncate(8, true) }}
+                                            <i class="bi bi-download"></i> 下载图纸
                                         </a>
                                         {% endfor %}
                                         {% endif %}
