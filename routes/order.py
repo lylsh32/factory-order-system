@@ -110,8 +110,8 @@ def create_order():
     
     if request.method == 'POST':
         customer_name = request.form.get('customer_name', '').strip()
-        contact_person = request.form.get('contact_person', '').strip()  # 新增
-        contact_phone = request.form.get('contact_phone', '').strip()    # 新增
+        contact_person = customer_name  # 联系人默认取客户名称
+        contact_phone = request.form.get('contact_phone', '').strip()
         remark = request.form.get('remark', '').strip()
         assigned_to = request.form.get('assigned_to', '')
         

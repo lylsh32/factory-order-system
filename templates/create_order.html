@@ -32,12 +32,6 @@
                             </div>
                             
                             <div class="col-md-4">
-                                <label for="contact_person" class="form-label">联系人</label>
-                                <input type="text" class="form-control" id="contact_person" name="contact_person" 
-                                       placeholder="请输入联系人姓名">
-                            </div>
-                            
-                            <div class="col-md-4">
                                 <label for="contact_phone" class="form-label">联系电话</label>
                                 <input type="text" class="form-control" id="contact_phone" name="contact_phone" 
                                        placeholder="请输入联系电话">
@@ -67,7 +61,7 @@
                                             <th style="width: 70px;">单价</th>
                                             <th style="width: 65px;">单位</th>
                                             <th style="width: 80px;">金额</th>
-                                            <th style="width: 100px;">图纸/截图</th>
+                                            <th style="width: 160px;">图纸/截图</th>
                                             <th style="width: 40px;">操作</th>
                                         </tr>
                                     </thead>
@@ -166,8 +160,11 @@ function addProductRow() {
         '<td><input type="number" class="form-control form-control-sm" name="unit_price[]" placeholder="单价" step="0.01" min="0" oninput="calculateAmount(' + productIndex + ')"></td>' +
         '<td>' + unitSelect + '</td>' +
         '<td><input type="text" class="form-control form-control-sm amount-cell" id="amount-' + productIndex + '" value="0.00" readonly style="background: #f8f9fa;"></td>' +
-        '<td><input type="file" class="form-control form-control-sm d-none" name="attachments_' + productIndex + '[]" multiple accept=".dwg,.dxf,.pdf">' +
-        '<input type="hidden" name="screenshot[]"><button type="button" class="btn btn-outline-secondary btn-sm" onclick="this.previousElementSibling.previousElementSibling.click()"><i class="bi bi-upload"></i></button></td>' +
+        '<td><div class="d-flex gap-1"><input type="file" class="form-control form-control-sm d-none" name="attachments_' + productIndex + '[]" multiple accept=".dwg,.dxf,.pdf">' +
+        '<input type="hidden" name="screenshot[]">' +
+        '<button type="button" class="btn btn-outline-secondary btn-sm flex-fill" title="上传图纸" onclick="this.parentElement.querySelector(\'input[type=file]\').click()"><i class="bi bi-upload"></i> 上传</button>' +
+        '<button type="button" class="btn btn-outline-info btn-sm flex-fill" title="粘贴截图" onclick="pasteScreenshot(' + productIndex + ')"><i class="bi bi-clipboard"></i> 截图</button>' +
+        '</div></td>' +
         '<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductRow(' + productIndex + ')"><i class="bi bi-trash"></i></button></td>';
     
     tbody.appendChild(tr);
@@ -220,6 +217,58 @@ function calculateTotalAmount() {
     });
     
     document.getElementById('totalAmount').textContent = total.toFixed(2);
+}
+
+function pasteScreenshot(rowIndex) {
+    const row = document.getElementById('product-row-' + rowIndex);
+    if (!row) return;
+    
+    // 创建临时粘贴区域
+    const pasteArea = document.createElement('div');
+    pasteArea.contentEditable = true;
+    pasteArea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+    document.body.appendChild(pasteArea);
+    pasteArea.focus();
+    
+    // 监听粘贴事件
+    pasteArea.addEventListener('paste', function(e) {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) { document.body.removeChild(pasteArea); return; }
+        
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                e.preventDefault();
+                const file = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const screenshotInput = row.querySelector('input[name="screenshot[]"]');
+                    screenshotInput.value = event.target.result;
+                    // 更新按钮显示已截图
+                    const btn = row.querySelectorAll('.btn-outline-info')[0];
+                    if (btn) {
+                        btn.classList.remove('btn-outline-info');
+                        btn.classList.add('btn-success');
+                        btn.innerHTML = '<i class="bi bi-check-lg"></i> 已截';
+                    }
+                };
+                reader.readAsDataURL(file);
+                break;
+            }
+        }
+        document.body.removeChild(pasteArea);
+    });
+    
+    // 提示用户
+    const btn = row.querySelectorAll('.btn-outline-info')[0];
+    if (btn && !btn.classList.contains('btn-success')) {
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-clipboard"></i> 粘贴...';
+        setTimeout(function() {
+            if (!btn.classList.contains('btn-success')) {
+                btn.innerHTML = origHtml;
+            }
+        }, 3000);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
