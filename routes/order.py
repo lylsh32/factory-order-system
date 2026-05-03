@@ -112,8 +112,6 @@ def create_order():
         customer_name = request.form.get('customer_name', '').strip()
         contact_person = customer_name
         contact_phone = request.form.get('contact_phone', '').strip()    # 新增
-        # 调试：看看传上来的附件key是什么
-        flash("附件keys: " + str(list(request.files.keys())), "info")
         remark = request.form.get('remark', '').strip()
         assigned_to = request.form.get('assigned_to', '')
         
@@ -253,23 +251,28 @@ def create_order():
             db.session.flush()
             
             # 处理附件
-            attachment_key = f'attachments_{i}'
-            if attachment_key in request.files:
-                files = request.files.getlist(attachment_key)
-                for file in files:
-                    if file and file.filename and allowed_file(file.filename):
-                        filename = secure_filename(file.filename)
-                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-                        new_filename = f"{order.id}_{product.id}_{timestamp}_{filename}"
-                        filepath = os.path.join(upload_folder, new_filename)
-                        
-                        file.save(filepath)
-                        
-                        attachment = Attachment(
-                            product_id=product.id,
-                            filename=filename,
-                            filepath=new_filename
-                        )
+            # 附件处理终极方案：不管前端传什么字段名，直接把所有文件按顺序分配
+            all_files = []
+            for key in request.files.keys():
+                for f in request.files.getlist(key):
+                    if f and f.filename:
+                        all_files.append(f)
+            
+            # 按产品顺序分配文件
+            if i < len(all_files):
+                file = all_files[i]
+                if allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                    new_filename = f"{order.id}_{product.id}_{timestamp}_{filename}"
+                    filepath = os.path.join(upload_folder, new_filename)
+                    file.save(filepath)
+                    attachment = Attachment(
+                        product_id=product.id,
+                        filename=filename,
+                        filepath=new_filename
+                    )
+                    db.session.add(attachment)
                         db.session.add(attachment)
         
         db.session.commit()
