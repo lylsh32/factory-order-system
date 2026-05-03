@@ -133,10 +133,21 @@ let productIndex = 0;
 const colorOptions = ['透明', '湖蓝', '草绿', '茶色', '灰色'];
 const unitOptions = ['件', '个', '套', '米', '平方米', '批'];
 
+function removeProductRow(index) {
+    const row = document.getElementById('product-row-' + index);
+    if (row) {
+        row.remove();
+        calculateTotalAmount();
+    }
+}
+
+let nextProductIndex = 0;  // 全局索引，只增不减，确保不重复
+
 function addProductRow() {
     const tbody = document.getElementById('productsBody');
     const tr = document.createElement('tr');
-    tr.id = 'product-row-' + productIndex;
+    const currentIdx = nextProductIndex++;  // 每次加1，永不重复
+    tr.id = 'product-row-' + currentIdx;
     
     let colorSelect = '<select class="form-select form-select-sm" name="color[]">';
     colorOptions.forEach(function(color) {
@@ -150,59 +161,34 @@ function addProductRow() {
     });
     unitSelect += '</select>';
     
-    tr.innerHTML = '<td class="text-center">' + (productIndex + 1) + '</td>' +
+    tr.innerHTML = '<td class="text-center">' + (tbody.children.length + 1) + '</td>' +
         '<td><input type="text" class="form-control form-control-sm" name="product_name[]" placeholder="产品名称" required></td>' +
         '<td><input type="number" class="form-control form-control-sm" name="thickness[]" placeholder="mm" step="0.1"></td>' +
         '<td>' + colorSelect + '</td>' +
         '<td><input type="number" class="form-control form-control-sm" name="length[]" placeholder="mm" required></td>' +
         '<td><input type="number" class="form-control form-control-sm" name="width[]" placeholder="mm" required></td>' +
-        '<td><input type="number" class="form-control form-control-sm" name="quantity[]" placeholder="数量" min="1" required oninput="calculateAmount(' + productIndex + ')"></td>' +
-        '<td><input type="number" class="form-control form-control-sm" name="unit_price[]" placeholder="单价" step="0.01" min="0" oninput="calculateAmount(' + productIndex + ')"></td>' +
+        '<td><input type="number" class="form-control form-control-sm" name="quantity[]" placeholder="数量" min="1" required oninput="calculateAmount(' + currentIdx + ')"></td>' +
+        '<td><input type="number" class="form-control form-control-sm" name="unit_price[]" placeholder="单价" step="0.01" min="0" oninput="calculateAmount(' + currentIdx + ')"></td>' +
         '<td>' + unitSelect + '</td>' +
-        '<td><input type="text" class="form-control form-control-sm amount-cell" id="amount-' + productIndex + '" value="0.00" readonly style="background: #f8f9fa;"></td>' +
-        '<td><div class="d-flex gap-1"><input type="file" class="form-control form-control-sm d-none" name="attachments_' + productIndex + '[]" multiple accept=".dwg,.dxf,.pdf" onchange="onFileSelected(' + productIndex + ', this)">' +
+        '<td><input type="text" class="form-control form-control-sm amount-cell" id="amount-' + currentIdx + '" value="0.00" readonly style="background: #f8f9fa;"></td>' +
+        '<td><div class="d-flex gap-1"><input type="file" class="form-control form-control-sm d-none" name="attachments_' + currentIdx + '[]" multiple accept=".dwg,.dxf,.pdf">' +
         '<input type="hidden" name="screenshot[]">' +
-        '<button type="button" id="upload-btn-' + productIndex + '" class="btn btn-outline-secondary btn-sm flex-fill" title="上传图纸" onclick="this.parentElement.querySelector(\'input[type=file]\').click()"><i class="bi bi-upload"></i> 上传</button>' +
-        '<button type="button" class="btn btn-outline-info btn-sm flex-fill" title="粘贴截图" onclick="pasteScreenshot(' + productIndex + ')"><i class="bi bi-clipboard"></i> 截图</button>' +
+        '<button type="button" id="upload-btn-' + currentIdx + '" class="btn btn-outline-secondary btn-sm flex-fill" title="上传图纸" onclick="this.parentElement.querySelector(\'input[type=file]\').click()"><i class="bi bi-upload"></i> 上传</button>' +
+        '<button type="button" class="btn btn-outline-info btn-sm flex-fill" title="粘贴截图" onclick="pasteScreenshot(' + currentIdx + ')"><i class="bi bi-clipboard"></i> 截图</button>' +
         '</div></td>' +
-        '<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductRow(' + productIndex + ')"><i class="bi bi-trash"></i></button></td>';
+        '<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductRow(' + currentIdx + ')"><i class="bi bi-trash"></i></button></td>';
+    
+    // 给新增的file input加onchange事件
+    setTimeout(function() {
+        const fileInput = tr.querySelector('input[type="file"]');
+        if (fileInput) {
+            fileInput.onchange = function() {
+                onFileSelected(currentIdx, this);
+            };
+        }
+    }, 10);
     
     tbody.appendChild(tr);
-    productIndex = rows.length;  // 确保下一个索引
-    renumberProductRows();
-}
-
-function removeProductRow(index) {
-    const row = document.getElementById('product-row-' + index);
-    if (row) {
-        row.remove();
-        // 重新编号所有产品行，确保索引连续
-        renumberProductRows();
-        calculateTotalAmount();
-    }
-}
-
-function renumberProductRows() {
-    const tbody = document.getElementById('productsBody');
-    const rows = tbody.querySelectorAll('tr');
-    rows.forEach(function(row, idx) {
-        row.id = 'product-row-' + idx;
-        // 更新上传按钮ID
-        const uploadBtn = row.querySelector('[id^="upload-btn-"]');
-        if (uploadBtn) {
-            uploadBtn.id = 'upload-btn-' + idx;
-        }
-        // 更新附件input的name
-        const fileInput = row.querySelector('input[type="file"]');
-        if (fileInput) {
-            fileInput.name = 'attachments_' + idx + '[]';
-        }
-        // 更新行号显示
-        const firstTd = row.querySelector('td:first-child');
-        if (firstTd) {
-            firstTd.textContent = idx + 1;
-        }
-    });
 }
 
 function calculateAmount(rowIndex) {
