@@ -232,16 +232,15 @@ def create_order():
         db.session.add(order)
         db.session.flush()
         
-        # 创建产品并处理附件
+        # 创建产品
         upload_folder = current_app.config['UPLOAD_FOLDER']
         os.makedirs(upload_folder, exist_ok=True)
         
-        # 先把所有附件的key都拿出来，转成普通list，不要保留request.files的引用
+        # 先把所有附件的key都拿出来，转成普通list
         attachment_keys = []
         for key in list(request.files.keys()):
             if key.startswith('attachments_'):
                 attachment_keys.append(key)
-        # 按数字排序
         attachment_keys.sort(key=lambda x: int(x.split('_')[1]))
         
         for i, product_data in enumerate(products_data):
@@ -261,9 +260,9 @@ def create_order():
             db.session.add(product)
             db.session.flush()
             
-            # 处理附件
-            if i < len(attachment_keys):
-                try:
+            # 处理附件 - 加 try-except 防止任何异常导致500
+            try:
+                if i < len(attachment_keys):
                     attachment_key = attachment_keys[i]
                     files = request.files.getlist(attachment_key)
                     for file in files:
@@ -281,11 +280,18 @@ def create_order():
                                 filepath=new_filename
                             )
                             db.session.add(attachment)
-                except Exception:
-                    # 附件保存失败不影响订单
-                    pass
+            except Exception as e:
+                # 附件保存失败，不影响订单，直接跳过
+                pass
         
         db.session.commit()
+        
+        # 清空files，防止Flask序列化session时碰到FileStorage导致500
+        try:
+            request.files = {}
+        except:
+            pass
+        
         flash(f'订单创建成功！订单号：{order.order_no}', 'success')
         return redirect(url_for('order.order_detail', order_id=order.id))
     
