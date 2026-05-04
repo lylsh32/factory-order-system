@@ -221,7 +221,7 @@
                 </div>
                 <div class="card-body">
                     {% if order.assigned_to == current_user.id or order.assigned_to == None %}
-                        {% if order.status == 'pending' %}
+                        {% if order.status == 'confirmed' or order.status == 'pending' %}
                         {% if order.assigned_to == None %}
                         <button class="btn btn-warning w-100 mb-2" onclick="claimOrder()">
                             <i class="bi bi-hand-index me-2"></i>认领订单
@@ -239,7 +239,7 @@
                             <i class="bi bi-play-circle me-2"></i>恢复生产
                         </button>
                         {% endif %}
-                        {% if order.status in ['producing', 'pending'] %}
+                        {% if order.status in ['producing', 'pending', 'confirmed'] %}
                         <button class="btn btn-outline-secondary w-100" onclick="updateStatus('paused')">
                             <i class="bi bi-pause-circle me-2"></i>暂停生产
                         </button>
