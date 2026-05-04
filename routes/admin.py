@@ -157,11 +157,14 @@ def reset_user_password(user_id):
 @login_required
 @admin_required
 def order_overview():
-    from models import Product
+    from models import Product, User
     
     start_date = request.args.get('start_date', '')
     end_date = request.args.get('end_date', '')
+    order_no = request.args.get('order_no', '')
     customer_name = request.args.get('customer_name', '')
+    status = request.args.get('status', '')
+    assigned_to = request.args.get('assigned_to', '')
     
     query = Order.query
     
@@ -179,19 +182,55 @@ def order_overview():
         except:
             pass
     
+    if order_no:
+        query = query.filter(Order.order_no.like(f'%{order_no}%'))
+    
     if customer_name:
         query = query.filter(Order.customer_name.like(f'%{customer_name}%'))
     
+    if status:
+        query = query.filter(Order.status == status)
+    
+    if assigned_to:
+        if assigned_to == '0':
+            query = query.filter(Order.assigned_to == None)
+        else:
+            query = query.filter(Order.assigned_to == int(assigned_to))
+    
     orders = query.order_by(Order.created_at.desc()).all()
     
+    # 计算统计数据
+    total_orders = len(orders)
+    total_products = sum(len(o.products) for o in orders)
     total_quantity = sum(o.total_quantity for o in orders)
+    
+    # 客户统计
+    customer_stats = {}
+    for order in orders:
+        if order.customer_name not in customer_stats:
+            customer_stats[order.customer_name] = 0
+        customer_stats[order.customer_name] += order.total_quantity
+    
+    # 获取工人数组
+    workers = User.query.filter_by(role='worker').all()
+    
+    filters = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'order_no': order_no,
+        'customer_name': customer_name,
+        'status': status,
+        'assigned_to': assigned_to
+    }
     
     return render_template('order_overview.html', 
                           orders=orders, 
+                          total_orders=total_orders,
+                          total_products=total_products,
                           total_quantity=total_quantity,
-                          start_date=start_date,
-                          end_date=end_date,
-                          customer_name=customer_name)
+                          customer_stats=customer_stats,
+                          workers=workers,
+                          filters=filters)
 
 @admin_bp.route('/export_orders')
 @login_required
