@@ -29,8 +29,8 @@
                             <div class="fw-bold fs-5">{{ order.order_no }}</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="text-muted small mb-1">客户名称</label>
-                            <div class="fw-bold fs-5">{{ order.customer_name }}</div>
+                            {% if current_user.role in ["admin", "sales"] %}<label class="text-muted small mb-1">客户名称</label>
+                            <div class="fw-bold fs-5">{{ order.customer_name }}</div>{% endif %}
                         </div>
                         {% if order.contact_person %}
                         <div class="col-md-6">
@@ -40,8 +40,8 @@
                         {% endif %}
                         {% if order.contact_phone %}
                         <div class="col-md-6">
-                            <label class="text-muted small mb-1">联系电话</label>
-                            <div class="fw-500">{{ order.contact_phone }}</div>
+                            {% if current_user.role in ["admin", "sales"] %}<label class="text-muted small mb-1">联系电话</label>
+                            <div class="fw-500">{{ order.contact_phone }}</div>{% endif %}
                         </div>
                         {% endif %}
                     </div>
@@ -60,9 +60,9 @@
                                     <th>厚度(mm)</th>
                                     <th>颜色</th>
                                     <th>数量</th>
-                                    <th>单价</th>
+                                    <th>{% if current_user.role in ["admin", "sales"] %}单价{% endif %}</th>
                                     <th>单位</th>
-                                    <th>金额</th>
+                                    <th>{% if current_user.role in ["admin", "sales"] %}金额{% endif %}</th>
                                     <th>图纸</th>
                                 </tr>
                             </thead>
@@ -121,13 +121,13 @@
                 </div>
             </div>
 
+            {% if current_user.role in ["admin", "sales"] %}
             <!-- 付款信息模块 -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>付款信息</h5>
                     {% if current_user.role in ['admin', 'sales'] %}
-                    {% if current_user.role in ["admin", "sales"] %}
-                        <button class="btn btn-primary btn-sm" onclick="showAddPaymentModal()">
+                    <button class="btn btn-primary btn-sm" onclick="showAddPaymentModal()">
                         <i class="bi bi-plus-circle me-1"></i>添加付款
                     </button>
                     {% endif %}
@@ -154,7 +154,6 @@
                         </div>
                     </div>
                     
-                    {% if current_user.role in ["admin", "sales"] %}
                     <!-- 付款状态 -->
                     <div class="mb-3">
                         <span class="me-2">付款状态：</span>
@@ -211,7 +210,7 @@
             </div>
         </div>
 
-        {% endif %}
+            {% endif %}
         <!-- 右侧操作区 -->
         <div class="col-lg-4">
             <!-- 状态操作 -->
