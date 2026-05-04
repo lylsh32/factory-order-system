@@ -32,12 +32,6 @@
                             <label class="text-muted small mb-1">客户名称</label>
                             <div class="fw-bold fs-5">{% if current_user.role in ["admin", "sales"] %}{{ order.customer_name }}{% endif %}</div>
                         </div>
-                        {% if order.contact_person %}
-                        <div class="col-md-6">
-                            <label class="text-muted small mb-1">联系人</label>
-                            <div class="fw-500">{{ order.contact_person }}</div>
-                        </div>
-                        {% endif %}
                         {% if order.contact_phone %}
                         <div class="col-md-6">
                             <label class="text-muted small mb-1">联系电话</label>
