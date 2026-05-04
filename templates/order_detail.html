@@ -50,9 +50,9 @@
                                 <tr>
                                     <th>#</th>
                                     <th>产品名称</th>
-                                    <th>长×宽(mm)</th>
                                     <th>厚度(mm)</th>
                                     <th>颜色</th>
+                                    <th>长×宽(mm)</th>
                                     <th>数量</th>
                                     <th>{% if current_user.role in ["admin", "sales"] %}单价{% endif %}</th>
                                     <th>单位</th>
@@ -65,9 +65,9 @@
                                 <tr>
                                     <td>{{ loop.index }}</td>
                                     <td class="fw-500">{{ product.product_name }}</td>
-                                    <td>{{ product.length }} × {{ product.width }}</td>
                                     <td>{{ product.thickness if product.thickness else '-' }}</td>
                                     <td>{{ product.color if product.color else '-' }}</td>
+                                    <td>{{ product.length }} × {{ product.width }}</td>
                                     <td>{{ product.quantity }}</td>
                                     <td>{% if current_user.role in ["admin", "sales"] %}{{ "%.2f"|format(product.unit_price) if product.unit_price else '0.00' }}{% endif %}</td>
                                     <td>{{ product.unit or '件' }}</td>
