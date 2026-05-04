@@ -323,7 +323,7 @@ def update_order_status(order_id):
     # 状态流转验证
     valid_transitions = {
         'quoting': ['confirmed', 'cancelled'],          # 报价中可确认或取消
-        'confirmed': ['pending', 'cancelled'],          # 已确认可转待生产或取消
+        'confirmed': ['pending', 'producing', 'cancelled', 'paused'],  # 已确认可直接开始生产
         'pending': ['producing', 'cancelled', 'paused'],
         'producing': ['completed', 'paused'],
         'paused': ['producing', 'cancelled'],
