@@ -115,3 +115,59 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+// 导入前双重确认
+document.addEventListener('DOMContentLoaded', function() {
+    const importForm = document.querySelector('form[action$="/backup/import"]');
+    const fileInput = importForm.querySelector('input[type="file"]');
+    
+    importForm.addEventListener('submit', function(e) {
+        if (!fileInput.value) {
+            alert('请先选择备份文件！');
+            e.preventDefault();
+            return false;
+        }
+        
+        // 第一次确认
+        const confirm1 = confirm(
+            '⚠️ 【第一次确认】\n\n' +
+            '您确定要导入数据库备份吗？\n\n' +
+            '这将：\n' +
+            '1. 先自动备份当前所有数据\n' +
+            '2. 然后执行您上传的备份文件\n\n' +
+            '注意：部分重复数据可能会报错，这是正常现象。'
+        );
+        
+        if (!confirm1) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // 第二次确认
+        const confirm2 = confirm(
+            '⚠️ 【第二次确认 - 最终警告】\n\n' +
+            '您真的确定要继续吗？\n\n' +
+            '虽然系统会自动备份，但数据恢复需要手动操作。\n\n' +
+            '建议：\n' +
+            '   - 先手动导出一份备份保存到本地\n' +
+            '   - 确保您上传的备份文件是正确的\n\n' +
+            '点击【确定】开始导入，点击【取消】放弃。'
+        );
+        
+        if (!confirm2) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // 显示加载提示
+        const btn = importForm.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>导入中，请稍候...';
+        
+        return true;
+    });
+});
+</script>
+{% endblock %}

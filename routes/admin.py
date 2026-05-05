@@ -393,18 +393,106 @@ def import_backup():
         flash('没有选择文件', 'error')
         return redirect(url_for('admin.backup'))
     
-    if file.filename.endswith('.sql'):
-        try:
-            sql_content = file.read().decode('utf-8')
-            
-            # 这里需要先警告用户
-            flash('⚠️ 数据库导入功能需要谨慎使用！', 'warning')
-            flash('为了数据安全，当前版本仅支持导出功能。', 'info')
-            flash('如需导入，请联系开发者进行手动恢复。', 'info')
-            
-        except Exception as e:
-            flash(f'读取文件失败: {str(e)}', 'error')
-    else:
+    if not file.filename.endswith('.sql'):
         flash('只支持 .sql 格式的备份文件', 'error')
+        return redirect(url_for('admin.backup'))
+    
+    try:
+        sql_content = file.read().decode('utf-8')
+        
+        # ========== 1. 先自动备份当前数据 ==========
+        from sqlalchemy import inspect
+        backup_output = StringIO()
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        backup_output.write("-- ========================================\n")
+        backup_output.write("-- 导入前自动备份\n")
+        backup_output.write(f"-- 备份时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        backup_output.write("-- ========================================\n\n")
+        
+        for table in tables:
+            backup_output.write(f"-- ===== 表: {table}\n")
+            columns = inspector.get_columns(table)
+            col_names = [c['name'] for c in columns]
+            
+            result = db.session.execute(text(f"SELECT * FROM {table}"))
+            rows = result.fetchall()
+            
+            if rows:
+                for row in rows:
+                    values = []
+                    for val in row:
+                        if val is None:
+                            values.append('NULL')
+                        elif isinstance(val, (int, float)):
+                            values.append(str(val))
+                        else:
+                            val_str = str(val).replace("'", "''")
+                            values.append(f"'{val_str}'")
+                    
+                    backup_output.write(f"INSERT INTO {table} ({', '.join(col_names)}) VALUES ({', '.join(values)});\n")
+            backup_output.write("\n")
+        
+        backup_output.seek(0)
+        auto_backup = backup_output.getvalue()
+        
+        # 保存自动备份到文件（用于恢复）
+        backup_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        backup_filename = f"auto_backup_before_import_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
+        backup_path = os.path.join(backup_dir, backup_filename)
+        
+        with open(backup_path, 'w', encoding='utf-8') as f:
+            f.write(auto_backup)
+        
+        flash(f'✅ 已自动备份当前数据到: {backup_filename}', 'success')
+        
+        # ========== 2. 开始导入 ==========
+        # 分割 SQL 语句
+        statements = []
+        current_statement = []
+        
+        for line in sql_content.split('\n'):
+            line = line.strip()
+            if not line or line.startswith('--'):
+                continue
+            current_statement.append(line)
+            if line.endswith(';'):
+                statement = ' '.join(current_statement)
+                statements.append(statement)
+                current_statement = []
+        
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        # 使用事务导入
+        with db.engine.begin() as connection:
+            for i, stmt in enumerate(statements, 1):
+                try:
+                    # 跳过注释和空语句
+                    if stmt.strip() and not stmt.strip().startswith('--'):
+                        connection.execute(text(stmt))
+                        success_count += 1
+                except Exception as e:
+                    error_count += 1
+                    errors.append(f"第 {i} 条出错: {str(e)[:100]}")
+        
+        flash(f'✅ 导入完成！成功执行 {success_count} 条 SQL', 'success')
+        
+        if error_count > 0:
+            flash(f'⚠️ 有 {error_count} 条执行出错（可能是重复数据，正常现象）', 'warning')
+            # 只显示前5个错误
+            for err in errors[:5]:
+                flash(f'  - {err}', 'warning')
+            if len(errors) > 5:
+                flash(f'  ... 还有 {len(errors) - 5} 个错误', 'warning')
+        
+        flash(f'💡 如遇问题可使用自动备份文件恢复: {backup_filename}', 'info')
+        
+    except Exception as e:
+        flash(f'❌ 导入失败: {str(e)}', 'error')
+        flash(f'💡 自动备份已保存，可以用备份文件恢复', 'info')
     
     return redirect(url_for('admin.backup'))
