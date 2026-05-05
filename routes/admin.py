@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, make_response
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from models import db, User, Order
 from datetime import datetime, timedelta
-from sqlalchemy import func
+from sqlalchemy import func, text
+from io import StringIO
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -311,3 +312,99 @@ def export_orders():
         as_attachment=True,
         download_name=f'订单导出_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
     )
+
+# ==================== 数据库备份功能 ====================
+
+@admin_bp.route('/backup')
+@login_required
+@admin_required
+def backup():
+    """数据库备份页面"""
+    return render_template('backup.html')
+
+@admin_bp.route('/backup/export')
+@login_required
+@admin_required
+def export_backup():
+    """导出数据库备份"""
+    from sqlalchemy import inspect
+    
+    # 生成SQL
+    output = StringIO()
+    
+    # 获取所有表名
+    inspector = inspect(db.engine)
+    tables = inspector.get_table_names()
+    
+    # 写入备份信息
+    output.write("-- ========================================\n")
+    output.write("-- 工厂排单系统数据库备份\n")
+    output.write(f"-- 导出时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    output.write("-- ========================================\n\n")
+    
+    # 导出每个表的数据
+    for table in tables:
+        output.write(f"-- ===== 表: {table}\n")
+        
+        # 获取表结构
+        columns = inspector.get_columns(table)
+        col_names = [c['name'] for c in columns]
+        
+        # 查询数据
+        result = db.session.execute(text(f"SELECT * FROM {table}"))
+        rows = result.fetchall()
+        
+        if rows:
+            for row in rows:
+                values = []
+                for i, val in enumerate(row):
+                    if val is None:
+                        values.append('NULL')
+                    elif isinstance(val, (int, float)):
+                        values.append(str(val))
+                    else:
+                        # 处理字符串转义
+                        val_str = str(val).replace("'", "''")
+                        values.append(f"'{val_str}'")
+                
+                output.write(f"INSERT INTO {table} ({', '.join(col_names)}) VALUES ({', '.join(values)});\n")
+        
+        output.write("\n")
+    
+    output.seek(0)
+    
+    # 生成下载响应
+    response = make_response(output.getvalue())
+    response.headers["Content-Disposition"] = f"attachment; filename=factory_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
+    response.headers["Content-type"] = "text/plain"
+    return response
+
+@admin_bp.route('/backup/import', methods=['POST'])
+@login_required
+@admin_required
+def import_backup():
+    """导入数据库备份"""
+    if 'backup_file' not in request.files:
+        flash('没有选择文件', 'error')
+        return redirect(url_for('admin.backup'))
+    
+    file = request.files['backup_file']
+    if file.filename == '':
+        flash('没有选择文件', 'error')
+        return redirect(url_for('admin.backup'))
+    
+    if file.filename.endswith('.sql'):
+        try:
+            sql_content = file.read().decode('utf-8')
+            
+            # 这里需要先警告用户
+            flash('⚠️ 数据库导入功能需要谨慎使用！', 'warning')
+            flash('为了数据安全，当前版本仅支持导出功能。', 'info')
+            flash('如需导入，请联系开发者进行手动恢复。', 'info')
+            
+        except Exception as e:
+            flash(f'读取文件失败: {str(e)}', 'error')
+    else:
+        flash('只支持 .sql 格式的备份文件', 'error')
+    
+    return redirect(url_for('admin.backup'))

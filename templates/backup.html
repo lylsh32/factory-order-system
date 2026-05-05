@@ -1,0 +1,117 @@
+{% extends "dashboard.html" %}
+
+{% block title %}数据库备份 - 工厂排单系统{% endblock %}
+
+{% block main_content %}
+<div class="content-wrapper">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('order.dashboard') }}">控制台</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.index') }}">系统管理</a></li>
+            <li class="breadcrumb-item active">数据库备份</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-12">
+            <h2 class="page-title mb-4">
+                <i class="bi bi-database me-2"></i>数据库备份
+            </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 导出备份 -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-download me-2 text-success"></i>导出数据库
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        将所有数据导出为 SQL 格式备份文件，包含：
+                    </p>
+                    <ul class="mb-4">
+                        <li>所有用户账号</li>
+                        <li>所有订单数据</li>
+                        <li>所有产品信息</li>
+                        <li>所有付款记录</li>
+                        <li>所有其他系统数据</li>
+                    </ul>
+                    <a href="{{ url_for('admin.export_backup') }}" class="btn btn-success w-100">
+                        <i class="bi bi-download me-2"></i>立即导出备份
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导入备份 -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-upload me-2 text-warning"></i>导入数据库
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning mb-4">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>危险操作！</strong>
+                        <p class="mb-0 mt-2 small">
+                            导入会覆盖现有数据，请确保：
+                        </p>
+                        <ul class="mb-0 mt-2 small">
+                            <li>已经导出了当前数据的备份</li>
+                            <li>确认要恢复的备份文件正确</li>
+                        </ul>
+                    </div>
+                    <form action="{{ url_for('admin.import_backup') }}" method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label">选择备份文件 (.sql)</label>
+                            <input type="file" class="form-control" name="backup_file" accept=".sql" required>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100" onclick="return confirm('⚠️ 确定要导入数据库吗？\n\n这会覆盖现有数据，请确保已经导出了当前数据的备份！')">
+                            <i class="bi bi-upload me-2"></i>导入备份
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2 text-info"></i>使用说明
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-3">📤 导出备份</h6>
+                            <ol class="small text-muted">
+                                <li>点击「立即导出备份」按钮</li>
+                                <li>浏览器会自动下载 .sql 备份文件</li>
+                                <li>将文件保存在安全的地方</li>
+                                <li>建议每周导出一次备份</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-3">📥 导入备份</h6>
+                            <ol class="small text-muted">
+                                <li>当前版本仅支持导出功能</li>
+                                <li>如需导入，请联系开发者</li>
+                                <li>导入前务必先导出当前数据备份！</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
